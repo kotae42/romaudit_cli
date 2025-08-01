@@ -1,0 +1,63 @@
+# Example configuration file for romaudit_cli
+# Copy this to config.toml and modify as needed
+#
+# NOTE: romaudit_cli only works with uncompressed ROM files.
+# Extract all ROMs from ZIP/7Z/RAR archives before scanning.
+
+# Directory configuration
+rom_dir = "roms"
+logs_dir = "logs"
+db_file = "rom_db.json"
+duplicate_prefix = "duplicates"
+unknown_prefix = "unknown"
+
+# Performance tuning
+buffer_size = 1048576  # 1MB in bytes
+
+# System file detection patterns
+[system_patterns]
+# Patterns that appear in brackets or parentheses
+bracket_patterns = [
+    "[bios]", "(bios)",
+    "[system]", "(system)",
+    "[firmware]", "(firmware)",
+    "[bootrom]", "(bootrom)",
+    "[boot]", "(boot)",
+    "[devkit]", "(devkit)"
+]
+
+# Patterns at the start of game names
+prefix_patterns = [
+    "bios ",
+    "system ",
+    "firmware ",
+    "boot ",
+    "bootrom ",
+    "ipl ",
+    "kernel "
+]
+
+# Patterns anywhere in the game name
+contains_patterns = [
+    "system menu",
+    "system settings",
+    "system update",
+    "dashboard",
+    "kernel",
+    "bootloader",
+    "nand dump",
+    "nand backup",
+    "flash dump",
+    "devkit",
+    "dev kit",
+    "kiosk",
+    "ipl rom",
+    "boot.rom",
+    "iplrom"
+]
+
+# Words to ignore when comparing ROM names
+stop_words = [
+    "the", "of", "and", "a", "an",
+    "in", "on", "at", "to", "for"
+]
