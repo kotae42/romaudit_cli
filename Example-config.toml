@@ -1,0 +1,24 @@
+# Example configuration file for romaudit_cli v1.6.1
+# Copy this to config.toml and modify as needed
+#
+# NOTE: romaudit_cli only works with uncompressed ROM files.
+# Extract all ROMs from ZIP/7Z/RAR archives before scanning.
+#
+# v1.6.1 simplified the organization logic - system patterns have been removed.
+# All games now follow the same folder rules.
+
+# Directory configuration
+rom_dir = "roms"
+logs_dir = "logs"
+db_file = "rom_db.json"
+duplicate_prefix = "duplicates"
+unknown_prefix = "unknown"
+
+# Performance tuning
+buffer_size = 1048576  # 1MB in bytes
+
+# Words to ignore when comparing ROM names
+stop_words = [
+    "the", "of", "and", "a", "an",
+    "in", "on", "at", "to", "for"
+]
