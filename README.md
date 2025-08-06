@@ -51,7 +51,6 @@ cargo build --release
 
 - Fixed overly aggressive folder creation for BIOS/system files  
 - Simplified organization logic - folders only when truly needed
-- See [MIGRATION.md](MIGRATION.md) for upgrade information
 
 ## Limitations
 
