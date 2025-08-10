@@ -1,14 +1,14 @@
 # romaudit_cli
 
-[![Version](https://img.shields.io/badge/version-1.6.1-blue.svg)](https://github.com/yourusername/romaudit_cli)
+[![Version](https://img.shields.io/badge/version-1.6.2-blue.svg)](https://github.com/yourusername/romaudit_cli)
 [![License](https://img.shields.io/badge/license-Personal%20Use%20Only-red.svg)](LICENSE)
 [![Rust](https://img.shields.io/badge/rust-2024%20edition-orange.svg)](https://www.rust-lang.org/)
 
-A powerful command-line ROM collection management tool written in Rust. romaudit_cli helps you organize, verify, and maintain your ROM collections using DAT files, with intelligent folder organization and comprehensive tracking.
+A powerful command-line ROM collection management tool written in Rust. romaudit_cli helps you organize, verify, and maintain your ROM collections using DAT/XML files, with intelligent folder organization and comprehensive tracking.
 
 **📋 License: Personal Use Only** - Free for personal use. Commercial use prohibited. See [LICENSE](LICENSE) for details.
 
-**🆕 Version 1.6.1** - Simplified folder logic, fixes overly aggressive folder creation. See [CHANGELOG](CHANGELOG.md).
+**🆕 Version 1.6.2** - Added XML file support and graceful shutdown handling. See [CHANGELOG](CHANGELOG.md).
 
 ## Quick Start
 
@@ -24,14 +24,14 @@ cargo build --release
 # Extract any compressed ROMs (ZIP, 7Z, etc) first!
 # romaudit_cli only works with uncompressed files
 
-# Run in a directory with a .dat file and ROM files
+# Run in a directory with a .dat or .xml file and ROM files
 ./target/release/romaudit_cli
 ```
 
 ## Features
 
 - **Automatic ROM Organization**: Intelligently organizes ROMs based on configurable rules
-- **Multi-format DAT Support**: Works with both No-Intro and MAME style DAT files
+- **Multi-format Support**: Works with both DAT and XML files (No-Intro and MAME formats)
 - **Smart Folder Management**: 
   - Multi-part games (disks, tracks) automatically placed in folders
   - Single ROMs with mismatched names get their own folders
@@ -41,16 +41,19 @@ cargo build --release
 - **Unknown ROM Handling**: Separates unrecognized files for easy review
 - **Shared ROM Tracking**: Identifies ROMs used by multiple games
 - **Progress Tracking**: Visual progress bar during scanning
+- **Large File Support**: Optimized for large MAME XML files (45MB+)
+- **Graceful Shutdown**: Clean interruption handling with Ctrl+C
 - **Detailed Logging**: Comprehensive logs for all operations
 - **Persistent Database**: Maintains ROM database across scans
 - **Fully Configurable**: No hardcoded values - everything is customizable
 - **Modern Rust**: Uses Rust edition 2024 for latest language features
 - **Optimized Performance**: Small binary size with aggressive optimizations
 
-## What's New in 1.6.1
+## What's New in 1.6.2
 
-- Fixed overly aggressive folder creation for BIOS/system files  
-- Simplified organization logic - folders only when truly needed
+- Added support for XML files (automatically detects .dat and .xml)
+- Graceful shutdown when interrupted with Ctrl+C
+- Improved handling of large MAME XML files (45MB+)
 - See [MIGRATION.md](MIGRATION.md) for upgrade information
 
 ## Limitations
@@ -82,7 +85,7 @@ The compiled binary will be in `target/release/romaudit_cli` (or `romaudit_cli.e
 
 ### Requirements
 
-- A `.dat` file (ROM database) in the current directory
+- A `.dat` or `.xml` file (ROM database) in the current directory
 - ROM files to be organized (can be in subdirectories)
 - **Important**: ROM files must be uncompressed. The tool does not support ZIP, 7Z, RAR, or other compressed formats.
 
@@ -93,7 +96,7 @@ The compiled binary will be in `target/release/romaudit_cli` (or `romaudit_cli.e
    - romaudit_cli only processes uncompressed ROM files
 
 2. Place the romaudit_cli executable in a directory containing:
-   - A `.dat` file (ROM database)
+   - A `.dat` or `.xml` file (ROM database)
    - Uncompressed ROM files to be organized
 
 3. Run the program:
@@ -101,11 +104,13 @@ The compiled binary will be in `target/release/romaudit_cli` (or `romaudit_cli.e
    ./romaudit_cli
    ```
 
-3. The program will:
+4. The program will:
+   - Automatically detect and use the first `.dat` or `.xml` file found
    - Scan all uncompressed files in the current directory and subdirectories
-   - Match them against the DAT file
+   - Match them against the DAT/XML file
    - Organize them according to the rules
    - Generate detailed logs
+   - Handle interruptions gracefully (Ctrl+C saves progress)
 
 ### Directory Structure
 
@@ -128,7 +133,7 @@ After running, your directory will be organized as:
 ├── duplicates1/           # Duplicate files (if any)
 ├── unknown1/              # Unrecognized files (if any)
 ├── rom_db.json           # Persistent ROM database
-└── your_dat_file.dat     # Original DAT file
+└── your_file.dat/.xml    # Original DAT/XML file
 ```
 
 ## Organization Rules
@@ -168,24 +173,26 @@ config.logs_dir = "audit_logs".to_string();
 
 Note: Version 1.6.1 simplified the organization logic. BIOS and system files now follow the same rules as regular games - folders are only created when there are multiple ROM files or name mismatches.
 
-## DAT File Support
+## DAT/XML File Support
 
-romaudit_cli supports various DAT file formats:
+romaudit_cli automatically detects and supports various file formats:
 
-### No-Intro Style
+### No-Intro Style DAT
 ```xml
 <game name="Game Name">
     <rom name="game.rom" size="524288" crc="12345678" md5="..." sha1="..."/>
 </game>
 ```
 
-### MAME Style
+### MAME Style XML
 ```xml
 <machine name="Game Name">
     <rom name="game.rom" size="524288" crc="12345678" md5="..." sha1="...">
     </rom>
 </machine>
 ```
+
+The tool automatically detects whether you're using a `.dat` or `.xml` file and handles files up to 45MB+ efficiently (tested with MAME XML files).
 
 ## Advanced Features
 
@@ -212,6 +219,13 @@ The name matching algorithm:
 - Ignores common punctuation variations
 - Recognizes region/version suffixes
 - Detects significant name mismatches requiring folders
+
+### Graceful Interruption
+
+If you need to stop the tool:
+- Press Ctrl+C for clean shutdown
+- Progress is automatically saved to `rom_db.json`
+- Run the tool again to continue from where you left off
 
 ## Example Scenarios
 
@@ -245,8 +259,10 @@ Output: roms/Memory (Japan)/MEMORY.ASF
 
 - **Efficient Hashing**: Uses 1MB buffer for optimal performance
 - **Progress Tracking**: Visual feedback during long operations
+- **Large File Support**: Adaptive buffering for large XML files (8MB buffer for files >10MB)
 - **Direct File Access**: Working with uncompressed files provides faster processing
 - **Persistent Database**: Speeds up subsequent scans
+- **Graceful Interruption**: Clean shutdown preserves progress
 
 ## Contributing
 
@@ -274,11 +290,11 @@ For commercial licensing, please contact: [your-email@example.com]
 
 ## Troubleshooting
 
-### No DAT file found
-Ensure you have a `.dat` file in the current directory.
+### No DAT/XML file found
+Ensure you have a `.dat` or `.xml` file in the current directory. The tool automatically detects and uses the first one it finds.
 
 ### Files not being matched
-- Check that your DAT file uses supported hash types (CRC32, MD5, SHA1)
+- Check that your DAT/XML file uses supported hash types (CRC32, MD5, SHA1)
 - **Ensure ROM files are uncompressed** - ZIP, 7Z, RAR files are not supported
 - Verify file integrity if ROMs are not being recognized
 
@@ -294,12 +310,21 @@ romaudit_cli does not support compressed files. Extract all ROMs from their arch
 Ensure you have write permissions in the directory where romaudit_cli is running.
 
 ### Large collections
-For very large collections, the initial scan may take time. Subsequent scans will be faster due to the persistent database.
+For very large collections, the initial scan may take time. The tool shows progress when parsing large XML files (45MB+). Subsequent scans will be faster due to the persistent database.
+
+### Process interruption
+If you need to stop the tool, press Ctrl+C. The tool will save its progress and you can continue later by running it again.
 
 ## FAQ
 
 ### Does romaudit_cli support compressed ROM files?
 **No.** romaudit_cli only works with uncompressed ROM files. You must extract all ROMs from ZIP, 7Z, RAR, or other archive formats before scanning. This is by design to ensure accurate hash verification and file organization.
+
+### What's the difference between DAT and XML files?
+Both contain ROM databases. DAT files are typically used by No-Intro, while XML files are commonly used by MAME. romaudit_cli automatically detects and handles both formats.
+
+### Can it handle large MAME XML files?
+**Yes.** Version 1.6.2 includes optimizations for large XML files, including adaptive buffering and progress indicators for files over 10MB.
 
 ### Why doesn't it support compressed files?
 Working with uncompressed files ensures:
@@ -309,4 +334,4 @@ Working with uncompressed files ensures:
 - Simpler codebase
 
 ### What file formats are supported?
-Any uncompressed ROM file format (.nes, .snes, .md, .gb, .gba, .n64, .iso, .bin, etc.) that matches entries in your DAT file.
+Any uncompressed ROM file format (.nes, .snes, .md, .gb, .gba, .n64, .iso, .bin, etc.) that matches entries in your DAT/XML file.

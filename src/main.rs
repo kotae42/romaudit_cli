@@ -1,5 +1,5 @@
 // romaudit_cli - ROM Collection Management Tool
-// Version 1.6.1
+// Version 1.6.2
 // Copyright (c) 2024 [Kotae42]
 //
 // This software is licensed for PERSONAL USE ONLY.
@@ -12,6 +12,8 @@ use std::path::{Path, PathBuf};
 use std::collections::{HashMap, HashSet};
 use std::error::Error;
 use std::fmt;
+use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::Arc;
 
 use crc32fast::Hasher as Crc32Hasher;
 use md5::Md5;
@@ -73,7 +75,7 @@ impl fmt::Display for RomAuditError {
             RomAuditError::Io(e) => write!(f, "IO error: {}", e),
             RomAuditError::Json(e) => write!(f, "JSON error: {}", e),
             RomAuditError::Xml(e) => write!(f, "XML error: {}", e),
-            RomAuditError::NoDatFile => write!(f, "No .dat file found in current directory"),
+            RomAuditError::NoDatFile => write!(f, "No .dat or .xml file found in current directory"),
             RomAuditError::InvalidPath(p) => write!(f, "Invalid path: {}", p),
         }
     }
@@ -131,11 +133,13 @@ struct RomAuditor {
     all_games: HashSet<String>,
     known_roms: KnownRoms,
     config: Config,
+    interrupted: Arc<AtomicBool>,
 }
 
 impl RomAuditor {
-    fn with_config(config: Config) -> Result<Self, RomAuditError> {
+    fn with_config(config: Config, interrupted: Arc<AtomicBool>) -> Result<Self, RomAuditError> {
         let dat_path = Self::find_dat_file()?;
+        println!("Found DAT/XML file: {}", dat_path.display());
         let (rom_db, all_games) = Self::parse_dat(&dat_path)?;
         let known_roms = Self::load_known_roms(&config.db_file)?;
 
@@ -144,6 +148,7 @@ impl RomAuditor {
             all_games,
             known_roms,
             config,
+            interrupted,
         })
     }
 
@@ -159,13 +164,27 @@ impl RomAuditor {
         std::fs::read_dir(".")?
             .filter_map(|e| e.ok())
             .map(|e| e.path())
-            .find(|p| p.extension().map(|ext| ext == "dat").unwrap_or(false))
+            .find(|p| {
+                p.extension()
+                    .and_then(|ext| ext.to_str())
+                    .map(|ext| ext.eq_ignore_ascii_case("dat") || ext.eq_ignore_ascii_case("xml"))
+                    .unwrap_or(false)
+            })
             .ok_or(RomAuditError::NoDatFile)
     }
 
     fn parse_dat(dat_path: &Path) -> Result<(RomDb, HashSet<String>), RomAuditError> {
         let file = File::open(dat_path)?;
-        let mut reader = Reader::from_reader(BufReader::new(file));
+        let file_size = file.metadata()?.len();
+
+        // For large files (like MAME XMLs), use a larger buffer
+        let buffer_size = if file_size > 10_000_000 {
+            8192 * 1024  // 8MB buffer for files over 10MB
+        } else {
+            8192  // 8KB default
+        };
+
+        let mut reader = Reader::from_reader(BufReader::with_capacity(buffer_size, file));
 
         let mut buf = Vec::new();
         let mut current_game = String::new();
@@ -181,6 +200,12 @@ impl RomAuditor {
             crc: None,
         };
         let mut in_rom_tag = false;
+
+        // Progress indicator for large files
+        let show_progress = file_size > 5_000_000;
+        if show_progress {
+            println!("Parsing large DAT/XML file ({:.1} MB)...", file_size as f64 / 1_048_576.0);
+        }
 
         loop {
             match reader.read_event_into(&mut buf)? {
@@ -287,6 +312,10 @@ impl RomAuditor {
                 _ => {}
             }
             buf.clear();
+        }
+
+        if show_progress {
+            println!("Parsed {} games with {} unique ROM hashes", all_games.len(), rom_db.len());
         }
 
         Ok((rom_db, all_games))
@@ -403,8 +432,14 @@ impl RomAuditor {
 
                 let file_name_str = file_name.to_string_lossy();
 
-                if path.extension().unwrap_or_default() != "dat" &&
-                   file_name_str != self.config.db_file &&
+                // Skip DAT/XML files and generated files
+                if let Some(ext) = path.extension().and_then(|e| e.to_str()) {
+                    if ext.eq_ignore_ascii_case("dat") || ext.eq_ignore_ascii_case("xml") {
+                        continue;
+                    }
+                }
+
+                if file_name_str != self.config.db_file &&
                    !file_name_str.ends_with(".tmp") &&
                    !self.is_generated_directory(&path) {
                     files.push(path);
@@ -487,6 +522,14 @@ impl RomAuditor {
         // Files are only treated as duplicates if all their intended destinations already exist.
 
         for file in files {
+            // Check for interruption
+            if self.interrupted.load(Ordering::Relaxed) {
+                bar.finish_with_message("Interrupted by user!");
+                println!("\nProcess interrupted. Partial results may have been saved.");
+                println!("Run the tool again to continue from where it left off.");
+                return Ok(result);
+            }
+
             let filename = file.file_name()
                 .ok_or_else(|| RomAuditError::InvalidPath(file.to_string_lossy().to_string()))?
                 .to_string_lossy()
@@ -978,6 +1021,15 @@ impl RomAuditor {
 }
 
 fn main() {
+    // Set up signal handling for graceful shutdown
+    let interrupted = Arc::new(AtomicBool::new(false));
+    let interrupted_clone = interrupted.clone();
+
+    ctrlc::set_handler(move || {
+        println!("\nReceived interrupt signal. Cleaning up...");
+        interrupted_clone.store(true, Ordering::Relaxed);
+    }).expect("Error setting Ctrl-C handler");
+
     // You can customize the configuration here if needed
     let config = Config::default();
 
@@ -989,7 +1041,7 @@ fn main() {
     // Or load from a config file:
     // let config = load_config_from_file("config.toml").unwrap_or_default();
 
-    match RomAuditor::with_config(config).and_then(|mut auditor| auditor.run()) {
+    match RomAuditor::with_config(config, interrupted).and_then(|mut auditor| auditor.run()) {
         Ok(()) => {}
         Err(e) => {
             eprintln!("Error: {}", e);

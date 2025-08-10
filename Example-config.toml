@@ -1,9 +1,10 @@
-# Example configuration file for romaudit_cli v1.6.1
+# Example configuration file for romaudit_cli v1.6.2
 # Copy this to config.toml and modify as needed
 #
 # NOTE: romaudit_cli only works with uncompressed ROM files.
 # Extract all ROMs from ZIP/7Z/RAR archives before scanning.
 #
+# v1.6.2 adds support for XML files and graceful shutdown handling.
 # v1.6.1 simplified the organization logic - system patterns have been removed.
 # All games now follow the same folder rules.
 
@@ -22,3 +23,6 @@ stop_words = [
     "the", "of", "and", "a", "an",
     "in", "on", "at", "to", "for"
 ]
+
+# Note: The tool automatically detects and uses the first .dat or .xml file
+# found in the current directory. No configuration needed for DAT/XML files.

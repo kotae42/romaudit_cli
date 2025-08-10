@@ -5,6 +5,23 @@ All notable changes to romaudit_cli will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.6.2] - 2025-08-11
+
+### Added
+- Support for XML files in addition to DAT files (automatically detects both)
+- Graceful shutdown handling for Ctrl+C interruption
+- Progress indicator for parsing large DAT/XML files (45MB+ MAME files)
+- Adaptive buffer sizing for improved performance with large files
+
+### Fixed
+- Application no longer hangs in memory when interrupted with Ctrl+C
+- Improved handling of large MAME XML files
+
+### Changed
+- File detection now uses case-insensitive matching for .dat and .xml extensions
+- Added ctrlc dependency (v3.4.7) for signal handling
+- Optimized XML parsing with larger buffers for files over 10MB
+
 ## [1.6.1] - 2025-08-05
 
 ### Fixed

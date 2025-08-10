@@ -14,9 +14,9 @@ By contributing to romaudit_cli, you agree that your contributions will be licen
 ### Reporting Issues
 
 - Check if the issue already exists in the [Issues](https://github.com/yourusername/romaudit_cli/issues) section
-- Include the version of romaudit_cli you're using
+- Include the version of romaudit_cli you're using (current: v1.6.2)
 - Provide steps to reproduce the issue
-- Include relevant DAT file format examples if applicable
+- Include relevant DAT/XML file format examples if applicable
 - Mention your operating system and Rust version
 
 ### Suggesting Features
@@ -54,13 +54,16 @@ By contributing to romaudit_cli, you agree that your contributions will be licen
 - Add comments for complex logic
 - Keep functions focused and small
 - Prefer clarity over cleverness
+- Use proper error handling with the custom `RomAuditError` type
 
 ## Testing
 
 Currently, the project lacks automated tests. When adding new features:
 - Consider adding unit tests
-- Test with various DAT file formats
+- Test with various DAT/XML file formats (both .dat and .xml files)
+- Test with large MAME XML files (45MB+)
 - Test edge cases (empty files, malformed data, etc.)
+- Test signal handling (Ctrl+C interruption)
 - Test on different operating systems if possible
 - Remember: romaudit_cli only supports uncompressed files
 
@@ -74,6 +77,12 @@ romaudit_cli is designed to work only with uncompressed ROM files. This is inten
 - Avoids dependencies on compression libraries
 
 If you're considering adding compression support, please open an issue for discussion first.
+
+### Signal Handling (Added in v1.6.2)
+The application uses `ctrlc` crate for graceful shutdown:
+- Clean interruption with Ctrl+C
+- Progress saved to `rom_db.json`
+- Can resume from where it left off
 
 ## Development Setup
 
@@ -91,10 +100,33 @@ git checkout -b feature/your-feature
 # Make changes and test
 cargo run
 
+# Test with a large MAME XML file
+# Place a .xml file in the directory and run
+
+# Test interruption handling
+# Start the tool and press Ctrl+C
+
 # Before committing
 cargo fmt
 cargo clippy
 ```
+
+## Current Architecture (v1.6.2)
+
+### Key Components
+- **DAT/XML Parser**: Supports both .dat and .xml formats
+- **File Scanner**: Recursively scans directories
+- **Hash Calculator**: CRC32, MD5, SHA1 support
+- **Organization Engine**: Smart folder logic
+- **Signal Handler**: Graceful shutdown with ctrlc
+- **Progress Tracker**: Visual feedback with indicatif
+
+### Dependencies
+- `sha1`, `md-5`, `crc32fast`: Hashing
+- `quick-xml`: DAT/XML parsing
+- `serde`, `serde_json`: Database persistence
+- `indicatif`: Progress bars
+- `ctrlc`: Signal handling (v3.4.7)
 
 ## Questions?
 

@@ -1,12 +1,19 @@
 # Development Notes
 
-## Current Version: 1.6.1
+## Current Version: 1.6.2
 
 ## License Notice
 
 This software is licensed for personal, non-commercial use only. By working on this project, you agree to maintain this licensing model. See LICENSE file for details.
 
 ## Building romaudit_cli
+
+### Recent Changes (v1.6.2)
+- Added support for XML files in addition to DAT files
+- Implemented graceful shutdown handling with Ctrl+C
+- Added ctrlc dependency (v3.4.7) for signal handling  
+- Optimized parsing for large MAME XML files (45MB+)
+- Added adaptive buffer sizing based on file size
 
 ### Recent Changes (v1.6.1)
 - Simplified folder organization logic
@@ -25,6 +32,9 @@ cargo build --release
 ### Dependencies Note
 
 The project uses `md-5` crate (with hyphen) in Cargo.toml, but imports as `md5` (without hyphen) in the code. This is correct - the package name and the crate name can differ.
+
+New dependency added in v1.6.2:
+- `ctrlc = "3.4.7"` - For graceful shutdown handling
 
 ### Rust Edition
 
@@ -45,6 +55,10 @@ The release profile is optimized for small binary size:
 - `strip = true` - Strip symbols from binary
 - `panic = "abort"` - Smaller binary, no unwinding
 
+Additional optimizations in v1.6.2:
+- Adaptive buffer sizing for XML parsing (8MB for files >10MB)
+- Progress indicators for large file parsing
+
 ### Configuration
 
 The project has a simple configuration structure that allows customization of:
@@ -53,6 +67,13 @@ The project has a simple configuration structure that allows customization of:
 - Folder prefixes (duplicate_prefix, unknown_prefix)
 - Buffer size for hashing
 - Stop words for name comparison
+
+### Signal Handling (New in v1.6.2)
+
+The application now properly handles interruption signals:
+- **Ctrl+C**: Triggers graceful shutdown, saves progress to `rom_db.json`
+- Uses `Arc<AtomicBool>` for thread-safe communication
+- Progress is preserved - can continue from where it left off
 
 ### Development Tips
 
@@ -76,6 +97,11 @@ The project has a simple configuration structure that allows customization of:
    cargo fmt
    ```
 
+5. Testing with large XML files:
+   - The tool now shows progress for files >5MB
+   - Uses larger buffers (8MB) for files >10MB
+   - Test with MAME XML files (45MB+) to verify performance
+
 ### Project Structure
 
 ```
@@ -90,16 +116,28 @@ romaudit_cli/
 ├── NOTICE              # License notice
 ├── CHANGELOG.md        # Version history
 ├── MIGRATION.md        # Upgrade guide
-├── DEVELOPMENT.md      # This file
+├── DEV-NOTES.md        # This file
+├── CONTRIBUTING.md     # Contribution guidelines
+├── Example-config.toml # Configuration example
 └── target/            # Build artifacts (git ignored)
 ```
+
+### File Format Support
+
+As of v1.6.2, the tool supports:
+- `.dat` files (No-Intro format)
+- `.xml` files (MAME format)
+- Case-insensitive extension matching
+- Automatic detection of first DAT/XML file in directory
 
 ### Testing
 
 Currently, the project has no automated tests. Consider adding:
 - Unit tests for hash calculation
-- Integration tests for DAT parsing
+- Integration tests for DAT/XML parsing
 - Tests for file organization logic
+- Tests for signal handling
+- Tests for large file handling
 
 ### Publishing Note
 
@@ -119,3 +157,4 @@ This project uses a personal-use-only license and should NOT be published to cra
 - GitHub Actions for automated builds and releases
 - Cross-platform binary releases
 - Automated testing suite
+- Support for multiple DAT/XML files simultaneously
