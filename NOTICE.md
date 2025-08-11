@@ -8,6 +8,6 @@ By using this software, you agree to use it only for personal, private purposes.
 Commercial use, including use in businesses, organizations, or for profit, is
 strictly prohibited without a commercial license.
 
-For commercial licensing, contact: [your-email@example.com]
+For commercial licensing, contact: [kotae042@gmail.com]
 
 See LICENSE file for complete terms and conditions.
