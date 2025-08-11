@@ -14,7 +14,7 @@ By contributing to romaudit_cli, you agree that your contributions will be licen
 ### Reporting Issues
 
 - Check if the issue already exists in the [Issues](https://github.com/yourusername/romaudit_cli/issues) section
-- Include the version of romaudit_cli you're using (current: v1.6.2)
+- Include the version of romaudit_cli you're using (current: v2.0.0)
 - Provide steps to reproduce the issue
 - Include relevant DAT/XML file format examples if applicable
 - Mention your operating system and Rust version
@@ -83,6 +83,21 @@ The application uses `ctrlc` crate for graceful shutdown:
 - Clean interruption with Ctrl+C
 - Progress saved to `rom_db.json`
 - Can resume from where it left off
+
+### Game Presence Detection (Fixed in v1.6.3)
+The application now properly detects which games are present:
+- Single-pass scanning with cached hashes for performance
+- Only organizes games that have ROM files
+- Prevents incomplete folder creation
+- Progress bar with ETA for better user experience
+
+### MAME DAT Type Handling (Added in v1.6.4)
+The application detects and handles different MAME DAT types:
+- Automatic detection from DAT header
+- Split sets: No duplication of parent ROMs to clones
+- Merged sets: Clone ROMs stay with parents
+- Non-merged sets: Complete self-contained games
+- Parent/clone relationship tracking
 
 ## Development Setup
 

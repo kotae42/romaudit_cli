@@ -1,6 +1,6 @@
 [package]
 name = "romaudit_cli"
-version = "1.6.2"
+version = "2.0.0"
 edition = "2024"
 
 [dependencies]
@@ -14,6 +14,7 @@ serde_json = "1.0.120"
 indicatif = "0.17.0"
 digest = "0.10.7" # Explicitly include this, as it provides the common Digest trait
 ctrlc = "3.4.7" # For handling Ctrl+C gracefully
+# toml = "0.9.5" # Uncomment to enable config file support
 
 [profile.release]
 lto = true

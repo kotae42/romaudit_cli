@@ -2,6 +2,89 @@
 
 This guide helps you upgrade romaudit_cli between versions.
 
+## Upgrading to 2.0.0
+
+### From Any 1.x Version
+**Major architectural change with 100% compatibility!**
+
+1. **What Changed**:
+   - Complete refactoring from monolithic to modular architecture
+   - Code split into 14 specialized modules
+   - Better error handling and type safety
+
+2. **What Stayed the Same**:
+   - All functionality identical to v1.6.4
+   - Same configuration format
+   - Same database format (`rom_db.json`)
+   - Same command-line usage
+   - Same output format
+
+3. **No Migration Required**:
+   - Just replace the binary
+   - Your existing `rom_db.json` works as-is
+   - Your existing configuration works as-is
+   - Continue using exactly as before
+
+4. **Benefits You Get**:
+   - Faster bug fixes (isolated modules)
+   - Easier to add custom features
+   - Better error messages
+   - More stable codebase
+
+### Why Version 2.0.0?
+
+While the user experience remains identical, the internal architecture is completely rewritten. Following semantic versioning, this major internal change warrants a major version bump.
+
+## Upgrading to 1.6.4
+
+### From 1.6.3
+**Major Enhancement**: MAME DAT type awareness for space-efficient organization.
+
+1. **What's New**:
+   - Automatic detection of merged, split, and non-merged MAME DATs
+   - Split sets no longer duplicate parent ROMs to clones
+   - Merged sets keep clone ROMs with parents only
+   - Significant space savings for split/merged sets
+
+2. **What to Expect**:
+   - If using split/merged DATs, much less disk space required
+   - Parent/clone relationships properly maintained
+   - DAT type shown in console output
+
+3. **Re-organization Recommended**:
+   - If you organized a split/merged DAT with v1.6.3, re-run to save space
+   - The tool will now skip unnecessary ROM duplication
+
+### From earlier versions
+Follow the migration steps for each version in order.
+
+## Upgrading to 1.6.3
+
+### From 1.6.2
+**IMPORTANT BUG FIX**: This version fixes a critical issue where the tool would create incomplete ROM folders for games not in your collection.
+
+1. **The Fixes**:
+   - Tool now performs single-pass scanning with cached hashes (much faster!)
+   - First identifies which games are actually present
+   - Only organizes games that have at least one ROM file
+   - Prevents creation of empty/incomplete folders
+   - **Major performance improvement** - no more duplicate hash calculations
+
+2. **What to Expect**:
+   - **Significantly faster processing** (especially for large collections)
+   - Progress bar now shows ETA
+   - If you had incomplete folders from v1.6.2, they won't be created anymore
+   - ROMs that match games not in your collection go to `unknown` folder
+   - More accurate organization, especially for MAME collections
+
+3. **Cleanup** (if upgrading from 1.6.2):
+   - Check your `roms/` folder for incomplete game folders
+   - These can be safely deleted if they only contain shared ROMs
+   - Re-run the tool to properly organize your collection
+
+### From 1.6.1 or earlier
+Follow the migration steps for each version in order.
+
 ## Upgrading to 1.6.2
 
 ### From 1.6.1

@@ -1,12 +1,31 @@
 # Development Notes
 
-## Current Version: 1.6.2
+## Current Version: 2.0.0
 
 ## License Notice
 
 This software is licensed for personal, non-commercial use only. By working on this project, you agree to maintain this licensing model. See LICENSE file for details.
 
 ## Building romaudit_cli
+
+### Recent Changes (v2.0.0)
+- **MAJOR**: Complete architectural refactoring to modular design
+- Code split into 14 specialized modules
+- Improved maintainability and testability
+- 100% backward compatible with v1.x
+
+### Recent Changes (v1.6.4)
+- **MAME DAT type detection**: Automatically detects merged/split/non-merged
+- Space-efficient handling for split and merged sets
+- Parent/clone relationship tracking
+- DAT type-specific organization logic
+
+### Recent Changes (v1.6.3)
+- **CRITICAL FIX**: Tool now only organizes games actually present in collection
+- **PERFORMANCE**: Single-pass scanning with cached hashes (massive speed improvement)
+- Added progress bar with ETA for better user feedback
+- Prevents creation of incomplete ROM folders for games not in collection
+- ROMs for absent games are now properly treated as unknown
 
 ### Recent Changes (v1.6.2)
 - Added support for XML files in addition to DAT files

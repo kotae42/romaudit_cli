@@ -1,6 +1,6 @@
 # romaudit_cli
 
-[![Version](https://img.shields.io/badge/version-1.6.2-blue.svg)](https://github.com/yourusername/romaudit_cli)
+[![Version](https://img.shields.io/badge/version-2.0.0-blue.svg)](https://github.com/yourusername/romaudit_cli)
 [![License](https://img.shields.io/badge/license-Personal%20Use%20Only-red.svg)](LICENSE)
 [![Rust](https://img.shields.io/badge/rust-2024%20edition-orange.svg)](https://www.rust-lang.org/)
 
@@ -8,7 +8,7 @@ A powerful command-line ROM collection management tool written in Rust. romaudit
 
 **📋 License: Personal Use Only** - Free for personal use. Commercial use prohibited. See [LICENSE](LICENSE) for details.
 
-**🆕 Version 1.6.2** - Added XML file support and graceful shutdown handling. See [CHANGELOG](CHANGELOG.md).
+**🆕 Version 2.0.0** - Major architectural refactoring to modular design. 100% compatible with v1.x. See [CHANGELOG](CHANGELOG.md).
 
 ## Quick Start
 
@@ -21,12 +21,17 @@ git clone https://github.com/yourusername/romaudit_cli.git
 cd romaudit_cli
 cargo build --release
 
-# Extract any compressed ROMs (ZIP, 7Z, etc) first!
-# romaudit_cli only works with uncompressed files
-
-# Run in a directory with a .dat or .xml file and ROM files
+# No configuration needed! Just run:
 ./target/release/romaudit_cli
+
+# The tool will:
+# - Look for a .dat or .xml file in current directory
+# - Scan and organize ROMs
+# - Create roms/ and logs/ directories
+# - Save progress to rom_db.json
 ```
+
+**Note**: No configuration file needed! The tool works with sensible defaults. See [Configuration](#configuration) for optional customization.
 
 ## Features
 
@@ -49,12 +54,21 @@ cargo build --release
 - **Modern Rust**: Uses Rust edition 2024 for latest language features
 - **Optimized Performance**: Small binary size with aggressive optimizations
 
-## What's New in 1.6.2
+## What's New in 2.0.0
 
-- Added support for XML files (automatically detects .dat and .xml)
-- Graceful shutdown when interrupted with Ctrl+C
-- Improved handling of large MAME XML files (45MB+)
-- See [MIGRATION.md](MIGRATION.md) for upgrade information
+**Major Architectural Refactoring**:
+- Complete rewrite from monolithic to modular architecture
+- Code organized into 14 specialized modules
+- **100% backward compatible** - no functional changes
+- Same configuration, same output, same database format
+- Easier to maintain, test, and extend
+
+**All v1.6.4 features preserved**:
+- MAME DAT type detection (merged/split/non-merged)
+- Smart organization rules
+- Single-pass scanning with cached hashes
+- Parent/clone relationship handling
+- Graceful shutdown (Ctrl+C)
 
 ## Limitations
 
@@ -99,7 +113,7 @@ The compiled binary will be in `target/release/romaudit_cli` (or `romaudit_cli.e
    - A `.dat` or `.xml` file (ROM database)
    - Uncompressed ROM files to be organized
 
-3. Run the program:
+3. Run the program (no configuration needed):
    ```bash
    ./romaudit_cli
    ```
@@ -111,6 +125,8 @@ The compiled binary will be in `target/release/romaudit_cli` (or `romaudit_cli.e
    - Organize them according to the rules
    - Generate detailed logs
    - Handle interruptions gracefully (Ctrl+C saves progress)
+
+**Note**: No `config.toml` required! The tool uses sensible defaults. See [Configuration](#configuration) if you want to customize settings.
 
 ### Directory Structure
 
@@ -157,21 +173,28 @@ romaudit_cli follows these intelligent organization rules:
 
 ## Configuration
 
-romaudit_cli uses sensible defaults but is fully configurable. You can modify:
+romaudit_cli uses sensible defaults but is fully configurable. 
 
-### Directory Names
-```rust
-config.rom_dir = "my_roms".to_string();
-config.logs_dir = "audit_logs".to_string();
+### Default Configuration (No File Needed)
+The tool works out-of-the-box without any configuration file, using these defaults:
+- ROM directory: `roms/`
+- Logs directory: `logs/`
+- Database file: `rom_db.json`
+- Buffer size: 1MB
+- Duplicate prefix: `duplicates`
+- Unknown prefix: `unknown`
+
+### Custom Configuration (Optional)
+You can optionally create a `config.toml` file to override defaults:
+
+```toml
+# config.toml (optional)
+rom_dir = "my_roms"
+logs_dir = "audit_logs"
+db_file = "my_database.json"
 ```
 
-### Other Settings
-- Database filename
-- Buffer size for hashing
-- Duplicate/unknown folder prefixes
-- Stop words for name comparison
-
-Note: Version 1.6.1 simplified the organization logic. BIOS and system files now follow the same rules as regular games - folders are only created when there are multiple ROM files or name mismatches.
+**Note**: The config file is completely optional. The tool runs perfectly with default settings.
 
 ## DAT/XML File Support
 
@@ -192,7 +215,29 @@ romaudit_cli automatically detects and supports various file formats:
 </machine>
 ```
 
-The tool automatically detects whether you're using a `.dat` or `.xml` file and handles files up to 45MB+ efficiently (tested with MAME XML files).
+### MAME DAT Types (Auto-detected)
+
+The tool automatically detects and handles three MAME DAT types:
+
+1. **Non-Merged Sets**:
+   - Each game is completely self-contained
+   - All ROMs (including shared ones) are duplicated for each game
+   - Ideal for: Individual game distribution, arcade cabinets
+   - Space usage: Highest (2-3x original size)
+
+2. **Split Sets**:
+   - Clone games only contain unique ROMs
+   - Clones depend on parent ROMs to function
+   - Ideal for: Complete collections with space constraints
+   - Space usage: Medium (more efficient than non-merged)
+
+3. **Merged Sets**:
+   - Clone ROMs are stored in parent game folders
+   - No separate clone folders created
+   - Ideal for: Maximum space efficiency
+   - Space usage: Lowest
+
+The tool automatically detects the DAT type from the header and organizes accordingly, preventing unnecessary duplication for split and merged sets.
 
 ## Advanced Features
 
@@ -257,12 +302,19 @@ Output: roms/Memory (Japan)/MEMORY.ASF
 
 ## Performance
 
-- **Efficient Hashing**: Uses 1MB buffer for optimal performance
-- **Progress Tracking**: Visual feedback during long operations
+- **Efficient Hashing**: Uses 1MB buffer for optimal performance  
+- **Single-pass scanning**: Calculates hashes only once per file (v1.6.3+)
+- **Progress Tracking**: Visual feedback with ETA for long operations
 - **Large File Support**: Adaptive buffering for large XML files (8MB buffer for files >10MB)
 - **Direct File Access**: Working with uncompressed files provides faster processing
 - **Persistent Database**: Speeds up subsequent scans
 - **Graceful Interruption**: Clean shutdown preserves progress
+
+**Note**: For large MAME collections:
+- **Non-merged sets**: Ensure you have 2-3x the ROM size in free space
+- **Split sets**: More space-efficient, clones depend on parents
+- **Merged sets**: Most space-efficient, all variants in parent folder
+- The tool automatically detects your DAT type and organizes accordingly
 
 ## Contributing
 
@@ -310,12 +362,26 @@ romaudit_cli does not support compressed files. Extract all ROMs from their arch
 Ensure you have write permissions in the directory where romaudit_cli is running.
 
 ### Large collections
-For very large collections, the initial scan may take time. The tool shows progress when parsing large XML files (45MB+). Subsequent scans will be faster due to the persistent database.
+For very large collections, the initial scan may take time. The tool shows progress with ETA (v1.6.3+). Subsequent scans will be faster due to the persistent database.
+
+### Disk space issues
+MAME collections space requirements depend on DAT type:
+- **Non-merged sets**: Require 2-3x original size (all ROMs duplicated)
+- **Split sets**: More efficient (clones don't duplicate parent ROMs)
+- **Merged sets**: Most efficient (clones stored with parents)
+
+If you're running out of space:
+1. Use split or merged DATs instead of non-merged
+2. Organize in smaller batches
+3. Check available disk space before organizing large collections
 
 ### Process interruption
 If you need to stop the tool, press Ctrl+C. The tool will save its progress and you can continue later by running it again.
 
 ## FAQ
+
+### Does romaudit_cli require a configuration file?
+**No.** The tool works perfectly with built-in defaults. You only need to create a `config.toml` if you want to customize settings like directory names or buffer sizes.
 
 ### Does romaudit_cli support compressed ROM files?
 **No.** romaudit_cli only works with uncompressed ROM files. You must extract all ROMs from ZIP, 7Z, RAR, or other archive formats before scanning. This is by design to ensure accurate hash verification and file organization.

@@ -1,11 +1,17 @@
-# Example configuration file for romaudit_cli v1.6.2
-# Copy this to config.toml and modify as needed
+# OPTIONAL configuration file for romaudit_cli v2.0.0
+# 
+# This file is NOT REQUIRED - the tool works perfectly with default settings.
+# Only create this file if you need to customize the default behavior.
+#
+# To use: Save as 'config.toml' in the same directory as romaudit_cli
+# To enable: Uncomment the 'toml' dependency in Cargo.toml and rebuild
 #
 # NOTE: romaudit_cli only works with uncompressed ROM files.
 # Extract all ROMs from ZIP/7Z/RAR archives before scanning.
 #
-# v1.6.2 adds support for XML files and graceful shutdown handling.
-# v1.6.1 simplified the organization logic - system patterns have been removed.
+# v2.0.0 complete modular architecture refactoring (100% compatible)
+# v1.6.4 adds MAME DAT type detection for space-efficient organization.
+# v1.6.3 fixes critical bug where incomplete folders were created for absent games.
 # All games now follow the same folder rules.
 
 # Directory configuration
