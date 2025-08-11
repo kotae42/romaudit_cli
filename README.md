@@ -1,6 +1,6 @@
 # romaudit_cli
 
-[![Version](https://img.shields.io/badge/version-2.0.0-blue.svg)](https://github.com/yourusername/romaudit_cli)
+[![Version](https://img.shields.io/badge/version-2.0.1-blue.svg)](https://github.com/yourusername/romaudit_cli)
 [![License](https://img.shields.io/badge/license-Personal%20Use%20Only-red.svg)](LICENSE)
 [![Rust](https://img.shields.io/badge/rust-2024%20edition-orange.svg)](https://www.rust-lang.org/)
 
@@ -8,7 +8,7 @@ A powerful command-line ROM collection management tool written in Rust. romaudit
 
 **📋 License: Personal Use Only** - Free for personal use. Commercial use prohibited. See [LICENSE](LICENSE) for details.
 
-**🆕 Version 2.0.0** - Major architectural refactoring to modular design. 100% compatible with v1.x. See [CHANGELOG](CHANGELOG.md).
+**🆕 Version 2.0.1** - Major architectural refactoring to modular design. 100% compatible with v1.x. See [CHANGELOG](CHANGELOG.md).
 
 ## Quick Start
 
