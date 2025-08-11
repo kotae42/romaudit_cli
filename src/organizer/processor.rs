@@ -26,6 +26,7 @@ pub fn process_file(
     duplicate_dir: &mut Option<PathBuf>,
     unknown_dir: &mut Option<PathBuf>,
     known_roms: &mut KnownRoms,
+    is_mame_dat: bool,  // NEW parameter
 ) -> Result<ProcessResult> {
     let filename = file_hash.path.file_name()
         .and_then(|n| n.to_str())
@@ -44,14 +45,15 @@ pub fn process_file(
             .collect::<Vec<_>>();
         
         if !entries_for_present_games.is_empty() {
-            // Apply DAT type-specific filtering
-            if *dat_type == DatType::Split || *dat_type == DatType::Merged {
+            // Apply DAT type-specific filtering only for non-MAME DATs
+            if !is_mame_dat && (*dat_type == DatType::Split || *dat_type == DatType::Merged) {
                 entries_for_present_games = filter_entries_by_dat_type(
                     entries_for_present_games,
                     dat_type,
                     parent_clone_map,
                 );
             }
+            // For MAME DATs, use entries exactly as specified in XML
             
             // Process placements
             let mut first_placement = true;
@@ -77,6 +79,13 @@ pub fn process_file(
                     continue;
                 }
                 
+                // For MAME DATs, only place files once per game (no duplication)
+                if is_mame_dat && !first_placement {
+                    // For MAME, each game should have its own copy already specified
+                    // We don't duplicate files between games
+                    continue;
+                }
+                
                 if first_placement {
                     // Move the file for the first placement
                     fs::rename(&file_hash.path, &new_path)?;
@@ -84,8 +93,8 @@ pub fn process_file(
                     first_placement = false;
                     placed_successfully = true;
                     organized_game = game_name.clone();
-                } else {
-                    // Copy the file for subsequent placements
+                } else if !is_mame_dat {
+                    // Copy the file for subsequent placements (only for non-MAME)
                     fs::copy(&source_path, &new_path)?;
                 }
                 
@@ -126,7 +135,7 @@ pub fn process_file(
     }
 }
 
-/// Filter entries based on DAT type rules
+/// Filter entries based on DAT type rules (for non-MAME DATs only)
 fn filter_entries_by_dat_type(
     entries: Vec<crate::types::RomEntry>,
     dat_type: &DatType,

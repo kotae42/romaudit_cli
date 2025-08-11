@@ -1,7 +1,7 @@
 // src/parser/xml.rs - XML/DAT parser
 
 use std::fs::File;
-use std::io::BufReader;
+use std::io::{BufReader, Read};
 use std::path::Path;
 use std::collections::{HashMap, HashSet};
 
@@ -11,6 +11,7 @@ use quick_xml::events::Event;
 use crate::error::Result;
 use crate::types::{RomEntry, RomHashes, RomDb, DatType, ParsedDat};
 use super::DatParser;
+use super::detector::is_mame_xml;
 
 pub struct XmlParser;
 
@@ -24,6 +25,22 @@ impl DatParser for XmlParser {
     fn parse(&self, dat_path: &Path) -> Result<ParsedDat> {
         let file = File::open(dat_path)?;
         let file_size = file.metadata()?.len();
+        
+        // Read a sample to detect if it's a MAME XML
+        let mut sample = String::new();
+        let mut file_for_sample = File::open(dat_path)?;
+        let mut buffer = [0; 4096];
+        if let Ok(n) = file_for_sample.read(&mut buffer) {
+            sample = String::from_utf8_lossy(&buffer[..n]).to_string();
+        }
+        
+        let is_mame = is_mame_xml(&sample);
+        
+        if is_mame {
+            println!("Detected MAME XML - using literal parsing mode");
+        } else {
+            println!("Detected standard DAT - using parent/clone handling");
+        }
         
         // For large files (like MAME XMLs), use a larger buffer
         let buffer_size = if file_size > 10_000_000 {
@@ -95,7 +112,12 @@ impl DatParser for XmlParser {
                         if let Ok(attr) = attr {
                             match attr.key.as_ref() {
                                 b"name" => current_game = attr.unescape_value()?.to_string(),
-                                b"cloneof" => current_parent = attr.unescape_value()?.to_string(),
+                                b"cloneof" => {
+                                    // Only track parent/clone for non-MAME DATs
+                                    if !is_mame {
+                                        current_parent = attr.unescape_value()?.to_string();
+                                    }
+                                }
                                 _ => {}
                             }
                         }
@@ -103,7 +125,8 @@ impl DatParser for XmlParser {
 
                     if !current_game.is_empty() {
                         all_games.insert(current_game.clone());
-                        if !current_parent.is_empty() {
+                        // For MAME XMLs, don't track parent/clone relationships
+                        if !is_mame && !current_parent.is_empty() {
                             parent_clone_map.insert(current_game.clone(), current_parent);
                         }
                         in_game_tag = true;
@@ -206,8 +229,11 @@ impl DatParser for XmlParser {
 
         if show_progress {
             println!("Parsed {} games with {} unique ROM hashes", all_games.len(), rom_db.len());
-            if !parent_clone_map.is_empty() {
+            if !is_mame && !parent_clone_map.is_empty() {
                 println!("Found {} clone relationships", parent_clone_map.len());
+            }
+            if is_mame {
+                println!("MAME XML mode: Each game treated as independent");
             }
         }
 
@@ -216,6 +242,7 @@ impl DatParser for XmlParser {
             all_games,
             dat_type,
             parent_clone_map,
+            is_mame_dat: is_mame,
         })
     }
 }

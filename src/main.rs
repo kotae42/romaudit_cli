@@ -1,5 +1,5 @@
 // romaudit_cli - ROM Collection Management Tool
-// Version 2.0.0
+// Version 2.0.1
 // Copyright (c) 2024 [Kotae42]
 //
 // This software is licensed for PERSONAL USE ONLY.
@@ -38,11 +38,16 @@ impl RomAuditor {
         let parsed_dat = parser::parse_dat_file(&dat_path)?;
         
         // Display DAT type if MAME
-        match parsed_dat.dat_type {
-            types::DatType::NonMerged => println!("DAT type: Non-merged (self-contained games)"),
-            types::DatType::Split => println!("DAT type: Split (clones depend on parents)"),
-            types::DatType::Merged => println!("DAT type: Merged (clones in parent folders)"),
-            types::DatType::Standard => {},
+        if parsed_dat.is_mame_dat {
+            println!("MAME XML detected - literal parsing mode enabled");
+            match parsed_dat.dat_type {
+                types::DatType::NonMerged => println!("DAT type: Non-merged (self-contained games)"),
+                types::DatType::Split => println!("DAT type: Split (clones depend on parents)"),
+                types::DatType::Merged => println!("DAT type: Merged (clones in parent folders)"),
+                types::DatType::Standard => {},
+            }
+        } else {
+            println!("Standard DAT - parent/clone handling enabled");
         }
         
         // Load known ROMs database
@@ -77,6 +82,7 @@ impl RomAuditor {
             self.parsed_dat.parent_clone_map.clone(),
             &self.parsed_dat.rom_db,
             self.interrupted.clone(),
+            self.parsed_dat.is_mame_dat,  // Pass MAME flag to organizer
         );
         
         let mut result = organizer.organize_files(

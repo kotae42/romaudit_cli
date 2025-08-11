@@ -2,6 +2,22 @@
 
 use crate::types::DatType;
 
+/// Detect if this is a MAME XML file based on specific identifiers
+pub fn is_mame_xml(content: &str) -> bool {
+    // Check for MAME-specific XML identifiers
+    content.contains("<mame build=") || 
+    content.contains("<!DOCTYPE mame [") ||
+    content.contains("MAME ROM database") ||
+    // Modern MAME uses <machine> instead of <game>
+    (content.contains("<machine name=") && content.contains("romof=")) ||
+    // Older MAME uses <game>
+    (content.contains("<game name=") && content.contains("romof=")) ||
+    // Check header comments for MAME
+    content.lines()
+        .take(10)  // Check first 10 lines
+        .any(|line| line.contains("MAME") && (line.contains("XML") || line.contains("xml")))
+}
+
 /// Detect DAT type from filename or content
 #[allow(dead_code)]
 pub fn detect_dat_type(filename: &str, content: Option<&str>) -> DatType {

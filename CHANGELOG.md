@@ -5,6 +5,31 @@ All notable changes to romaudit_cli will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.0.1] - 2025-01-11
+
+### Changed
+- **MAME XML Support**: Separated logic for MAME XML files vs standard DAT files
+  - MAME XMLs are now parsed literally without parent/clone file sharing
+  - Each game entry in MAME XML is treated as independent
+  - Only existing folders are organized, no new folders created for MAME
+  - Users choose the appropriate MAME XML (merged/split/non-merged) for their collection
+- **Standard DAT Support**: Maintained intelligent parent/clone handling for non-MAME DATs
+  - Shared files are still handled automatically
+  - Missing files can be copied from parent sets
+  - Clone games inherit parent ROMs when needed
+
+### Added
+- `is_mame_dat` field to `ParsedDat` struct to distinguish MAME XMLs
+- `is_mame_xml()` function to detect MAME-specific XML files
+- Separate organization logic paths for MAME vs standard collections
+- Clear console output indicating which mode is being used
+
+### Fixed
+- Spurious folder creation for MAME non-merged sets
+- Incorrect file copying between folders in MAME collections
+- Individual ROM files being treated as complete sets
+- Parent/clone relationships incorrectly applied to MAME XMLs
+
 ## [2.0.0] - 2025-08-11
 
 ### Changed

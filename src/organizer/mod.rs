@@ -20,6 +20,7 @@ pub struct Organizer {
     parent_clone_map: HashMap<String, String>,
     games_needing_folders: HashSet<String>,
     interrupted: Arc<AtomicBool>,
+    is_mame_dat: bool,  // NEW: Track if this is a MAME DAT
 }
 
 impl Organizer {
@@ -29,6 +30,7 @@ impl Organizer {
         parent_clone_map: HashMap<String, String>,
         rom_db: &RomDb,
         interrupted: Arc<AtomicBool>,
+        is_mame_dat: bool,  // NEW parameter
     ) -> Self {
         let games_needing_folders = rules::identify_games_needing_folders(rom_db, &config);
         
@@ -38,6 +40,7 @@ impl Organizer {
             parent_clone_map,
             games_needing_folders,
             interrupted,
+            is_mame_dat,
         }
     }
     
@@ -75,9 +78,11 @@ impl Organizer {
         println!("Organizing ROMs for {} games...", games_with_files.len());
         
         // Warn about space requirements for MAME non-merged sets
-        if games_with_files.len() > 100 && self.dat_type == DatType::NonMerged {
+        if games_with_files.len() > 100 && self.dat_type == DatType::NonMerged && !self.is_mame_dat {
             println!("Note: Non-merged sets require significant disk space as each game gets complete copies of all ROMs.");
             println!("Consider using split or merged DATs if space is limited.");
+        } else if self.is_mame_dat {
+            println!("MAME XML mode: Games organized as specified in XML, no file sharing");
         }
         
         // Set up progress bar
@@ -125,6 +130,7 @@ impl Organizer {
                 &mut duplicate_dir,
                 &mut unknown_dir,
                 known_roms,
+                self.is_mame_dat,  // Pass MAME flag to processor
             )?;
             
             // Update result
@@ -145,17 +151,19 @@ impl Organizer {
         
         bar.finish_with_message("Organization complete!");
         
-        // Track shared ROMs
-        for (hash, entries) in known_roms.iter() {
-            if entries.len() > 1 {
-                let games: Vec<String> = entries.iter()
-                    .map(|(game, _)| game.clone())
-                    .collect::<HashSet<_>>()
-                    .into_iter()
-                    .collect();
-                
-                if games.len() > 1 {
-                    result.shared_roms.insert(hash.clone(), games);
+        // Track shared ROMs (only for non-MAME DATs)
+        if !self.is_mame_dat {
+            for (hash, entries) in known_roms.iter() {
+                if entries.len() > 1 {
+                    let games: Vec<String> = entries.iter()
+                        .map(|(game, _)| game.clone())
+                        .collect::<HashSet<_>>()
+                        .into_iter()
+                        .collect();
+                    
+                    if games.len() > 1 {
+                        result.shared_roms.insert(hash.clone(), games);
+                    }
                 }
             }
         }

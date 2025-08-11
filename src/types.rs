@@ -46,6 +46,7 @@ pub struct ParsedDat {
     pub all_games: HashSet<String>,
     pub dat_type: DatType,
     pub parent_clone_map: HashMap<String, String>, // clone -> parent mapping
+    pub is_mame_dat: bool,  // NEW: Distinguish MAME XMLs for literal parsing
 }
 
 #[derive(Debug)]
