@@ -1,4 +1,4 @@
-// src/parser/xml.rs - XML/DAT parser
+// src/parser/xml.rs - XML/DAT parser (excerpt - just the parse function)
 
 use std::fs::File;
 use std::io::{BufReader, Read};
@@ -26,15 +26,22 @@ impl DatParser for XmlParser {
         let file = File::open(dat_path)?;
         let file_size = file.metadata()?.len();
         
-        // Read a sample to detect if it's a MAME XML
+        // Read a larger sample to detect if it's a MAME XML (increased to 32KB)
         let mut sample = String::new();
         let mut file_for_sample = File::open(dat_path)?;
-        let mut buffer = [0; 4096];
+        let mut buffer = vec![0; 32768]; // 32KB should be enough to find MAME identifiers
         if let Ok(n) = file_for_sample.read(&mut buffer) {
             sample = String::from_utf8_lossy(&buffer[..n]).to_string();
         }
         
-        let is_mame = is_mame_xml(&sample);
+        // Also check filename for MAME
+        let filename = dat_path.file_name()
+            .and_then(|n| n.to_str())
+            .unwrap_or("");
+        
+        // Check both content and filename for MAME indicators
+        let is_mame = is_mame_xml(&sample) || 
+                      filename.to_lowercase().contains("mame");
         
         if is_mame {
             println!("Detected MAME XML - using literal parsing mode");

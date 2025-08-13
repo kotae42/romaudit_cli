@@ -12,10 +12,16 @@ pub fn is_mame_xml(content: &str) -> bool {
     (content.contains("<machine name=") && content.contains("romof=")) ||
     // Older MAME uses <game>
     (content.contains("<game name=") && content.contains("romof=")) ||
+    // Check for cloneof attribute (common in MAME)
+    content.contains("cloneof=") ||
     // Check header comments for MAME
     content.lines()
-        .take(10)  // Check first 10 lines
-        .any(|line| line.contains("MAME") && (line.contains("XML") || line.contains("xml")))
+        .take(20)  // Check first 20 lines (increased from 10)
+        .any(|line| {
+            let lower = line.to_lowercase();
+            lower.contains("mame") || 
+            lower.contains("multiple arcade machine emulator")
+        })
 }
 
 /// Detect DAT type from filename or content
