@@ -1,6 +1,18 @@
 # Development Notes
 
-## Current Version: 2.0.0
+## Current Version: 2.1.0
+
+### Recent Changes (v2.1.0)
+- **Performance**: Implemented multi-threaded file scanning and hashing using the `rayon` crate. This provides a significant performance boost on multi-core systems.
+- **Bug Fixes**:
+    - Corrected logic for MAME non-merged sets to properly create self-contained game directories.
+    - Fixed incorrect placement of MAME CHD (disk) files.
+    - Resolved an issue where the scanner could incorrectly skip a user's `roms` directory.
+- **Refactoring**:
+    - Simplified the complex folder-creation logic for predictability.
+    - Made the database saving process more efficient.
+- **Dependencies**:
+    - Added `rayon = "1.11.0"` for parallel processing.
 
 ## License Notice
 

@@ -1,6 +1,6 @@
 # romaudit_cli
 
-[![Version](https://img.shields.io/badge/version-2.0.1-blue.svg)](https://github.com/yourusername/romaudit_cli)
+[![Version](https://img.shields.io/badge/version-2.1.0-blue.svg)](https://github.com/yourusername/romaudit_cli)
 [![License](https://img.shields.io/badge/license-Personal%20Use%20Only-red.svg)](LICENSE)
 [![Rust](https://img.shields.io/badge/rust-2024%20edition-orange.svg)](https://www.rust-lang.org/)
 
@@ -8,7 +8,7 @@ A powerful command-line ROM collection management tool written in Rust. romaudit
 
 **📋 License: Personal Use Only** - Free for personal use. Commercial use prohibited. See [LICENSE](LICENSE) for details.
 
-**🆕 Version 2.0.1** - Major architectural refactoring to modular design. 100% compatible with v1.x. See [CHANGELOG](CHANGELOG.md).
+**🚀 New in 2.1.0**: Multi-threaded scanning for significantly faster performance!
 
 ## Quick Start
 
@@ -35,6 +35,7 @@ cargo build --release
 
 ## Features
 
+- **Multi-threaded Performance**: Utilizes multiple CPU cores for significantly faster file scanning and hashing.
 - **Automatic ROM Organization**: Intelligently organizes ROMs based on configurable rules
 - **Multi-format Support**: Works with both DAT and XML files (No-Intro and MAME formats)
 - **Smart Folder Management**: 
@@ -302,6 +303,7 @@ Output: roms/Memory (Japan)/MEMORY.ASF
 
 ## Performance
 
+- **Multi-threaded Scanning**: Leverages multiple CPU cores for faster hashing on modern processors.
 - **Efficient Hashing**: Uses 1MB buffer for optimal performance  
 - **Single-pass scanning**: Calculates hashes only once per file (v1.6.3+)
 - **Progress Tracking**: Visual feedback with ETA for long operations

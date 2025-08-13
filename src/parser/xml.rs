@@ -1,4 +1,4 @@
-// src/parser/xml.rs - XML/DAT parser (excerpt - just the parse function)
+// src/parser/xml.rs - XML/DAT parser
 
 use std::fs::File;
 use std::io::{BufReader, Read};
@@ -11,7 +11,7 @@ use quick_xml::events::Event;
 use crate::error::Result;
 use crate::types::{RomEntry, RomHashes, RomDb, DatType, ParsedDat};
 use super::DatParser;
-use super::detector::is_mame_xml;
+use super::detector::{is_mame_xml, is_mame_filename, detect_dat_type};
 
 pub struct XmlParser;
 
@@ -26,25 +26,32 @@ impl DatParser for XmlParser {
         let file = File::open(dat_path)?;
         let file_size = file.metadata()?.len();
         
-        // Read a larger sample to detect if it's a MAME XML (increased to 32KB)
+        // Read a large sample to detect if it's a MAME XML (64KB should be enough)
         let mut sample = String::new();
         let mut file_for_sample = File::open(dat_path)?;
-        let mut buffer = vec![0; 32768]; // 32KB should be enough to find MAME identifiers
+        let sample_size = std::cmp::min(65536, file_size as usize); // Read up to 64KB
+        let mut buffer = vec![0; sample_size];
         if let Ok(n) = file_for_sample.read(&mut buffer) {
             sample = String::from_utf8_lossy(&buffer[..n]).to_string();
         }
         
-        // Also check filename for MAME
+        // Get filename for detection
         let filename = dat_path.file_name()
             .and_then(|n| n.to_str())
             .unwrap_or("");
         
+        // Detect DAT type from filename first
+        let mut dat_type = detect_dat_type(filename, Some(&sample));
+        
         // Check both content and filename for MAME indicators
+        // If the filename contains MAME or the type is detected, it's likely MAME
         let is_mame = is_mame_xml(&sample) || 
-                      filename.to_lowercase().contains("mame");
+                      is_mame_filename(filename) ||
+                      dat_type != DatType::Standard;  // If a type was detected, it's likely MAME
         
         if is_mame {
             println!("Detected MAME XML - using literal parsing mode");
+            println!("DAT type from filename: {:?}", dat_type);
         } else {
             println!("Detected standard DAT - using parent/clone handling");
         }
@@ -60,13 +67,10 @@ impl DatParser for XmlParser {
 
         let mut buf = Vec::new();
         let mut current_game = String::new();
-        let mut _current_parent = String::new();
         let mut rom_db = RomDb::new();
         let mut all_games = HashSet::new();
         let mut in_game_tag = false;
-        let mut dat_type = DatType::Standard;
         let mut parent_clone_map = HashMap::new();
-        let mut in_header = false;
 
         // For handling non-self-closing ROM tags
         let mut current_rom_name = String::new();
@@ -85,28 +89,27 @@ impl DatParser for XmlParser {
 
         loop {
             match reader.read_event_into(&mut buf)? {
-                // Handle header for DAT type detection
+                // Handle header for additional DAT type detection if needed
                 Event::Start(e) if e.name().as_ref() == b"header" => {
-                    in_header = true;
+                    // Header detected - could parse header content if needed
                 }
                 
                 Event::End(e) if e.name().as_ref() == b"header" => {
-                    in_header = false;
+                    // End of header
                 }
                 
-                // Detect DAT type from name or description in header
-                Event::Start(e) if in_header && (e.name().as_ref() == b"name" || e.name().as_ref() == b"description") => {
-                    // Continue to read the text content
-                }
-                
-                Event::Text(e) if in_header => {
-                    let text = String::from_utf8_lossy(e.as_ref()).to_lowercase();
-                    if text.contains("non-merged") {
-                        dat_type = DatType::NonMerged;
-                    } else if text.contains("split") {
-                        dat_type = DatType::Split;
-                    } else if text.contains("merged") && !text.contains("non-merged") {
-                        dat_type = DatType::Merged;
+                // Check for DAT type info in header text elements
+                Event::Text(e) => {
+                    // If we haven't determined the type yet, check text content
+                    if dat_type == DatType::Standard && is_mame {
+                        let text = String::from_utf8_lossy(e.as_ref()).to_lowercase();
+                        if text.contains("non-merged") || text.contains("nonmerged") {
+                            dat_type = DatType::NonMerged;
+                        } else if text.contains("split") && !text.contains("non") {
+                            dat_type = DatType::Split;
+                        } else if text.contains("merged") && !text.contains("non") {
+                            dat_type = DatType::Merged;
+                        }
                     }
                 }
 
@@ -119,9 +122,9 @@ impl DatParser for XmlParser {
                         if let Ok(attr) = attr {
                             match attr.key.as_ref() {
                                 b"name" => current_game = attr.unescape_value()?.to_string(),
-                                b"cloneof" => {
-                                    // Only track parent/clone for non-MAME DATs
-                                    if !is_mame {
+                                b"cloneof" | b"romof" => {
+                                    // Only track parent/clone relationships for MAME DATs
+                                    if is_mame {
                                         current_parent = attr.unescape_value()?.to_string();
                                     }
                                 }
@@ -132,8 +135,8 @@ impl DatParser for XmlParser {
 
                     if !current_game.is_empty() {
                         all_games.insert(current_game.clone());
-                        // For MAME XMLs, don't track parent/clone relationships
-                        if !is_mame && !current_parent.is_empty() {
+                        // For MAME XMLs, track parent/clone relationships
+                        if is_mame && !current_parent.is_empty() {
                             parent_clone_map.insert(current_game.clone(), current_parent);
                         }
                         in_game_tag = true;
@@ -169,6 +172,7 @@ impl DatParser for XmlParser {
                         name: name.clone(),
                         game: current_game.clone(),
                         hashes: hashes.clone(),
+                        is_disk: false,
                     };
 
                     // Store by all available hash types
@@ -180,6 +184,32 @@ impl DatParser for XmlParser {
                     }
                     if let Some(ref crc) = hashes.crc {
                         rom_db.entry(crc.clone()).or_insert_with(Vec::new).push(rom_entry.clone());
+                    }
+                }
+
+                // Handle self-closing DISK tags (MAME CHDs)
+                Event::Empty(e) if e.name().as_ref() == b"disk" && in_game_tag => {
+                    let mut name = String::new();
+                    let mut sha1 = None;
+
+                    for attr in e.attributes() {
+                        if let Ok(attr) = attr {
+                            match attr.key.as_ref() {
+                                b"name" => name = attr.unescape_value()?.to_string(),
+                                b"sha1" => sha1 = Some(attr.unescape_value()?.to_lowercase()),
+                                _ => {}
+                            }
+                        }
+                    }
+
+                    if let Some(sha1_hash) = sha1 {
+                        let rom_entry = RomEntry {
+                            name,
+                            game: current_game.clone(),
+                            hashes: RomHashes { sha1: Some(sha1_hash.clone()), ..Default::default() },
+                            is_disk: true,
+                        };
+                        rom_db.entry(sha1_hash).or_insert_with(Vec::new).push(rom_entry);
                     }
                 }
 
@@ -214,6 +244,7 @@ impl DatParser for XmlParser {
                         name: current_rom_name.clone(),
                         game: current_game.clone(),
                         hashes: current_rom_hashes.clone(),
+                        is_disk: false,
                     };
 
                     // Store by all available hash types
@@ -236,11 +267,12 @@ impl DatParser for XmlParser {
 
         if show_progress {
             println!("Parsed {} games with {} unique ROM hashes", all_games.len(), rom_db.len());
-            if !is_mame && !parent_clone_map.is_empty() {
-                println!("Found {} clone relationships", parent_clone_map.len());
-            }
             if is_mame {
-                println!("MAME XML mode: Each game treated as independent");
+                if !parent_clone_map.is_empty() {
+                    println!("Found {} parent/clone relationships.", parent_clone_map.len());
+                }
+            } else {
+                println!("Standard DAT mode: No parent/clone handling will be applied.");
             }
         }
 

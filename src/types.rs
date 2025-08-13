@@ -8,9 +8,10 @@ pub struct RomEntry {
     pub name: String,
     pub game: String,
     pub hashes: RomHashes,
+    pub is_disk: bool,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
 pub struct RomHashes {
     pub sha1: Option<String>,
     pub md5: Option<String>,

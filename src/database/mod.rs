@@ -1,7 +1,7 @@
 // src/database/mod.rs - Database module
 
 use std::fs::{self, File};
-use std::collections::HashMap;
+use std::collections::{BTreeMap};
 use serde_json;
 
 use crate::error::Result;
@@ -41,34 +41,21 @@ pub fn load_known_roms(db_file: &str) -> Result<KnownRoms> {
 
 /// Save known ROMs to database file
 pub fn save_known_roms(known_roms: &KnownRoms, db_file: &str) -> Result<()> {
-    // Group by game name for better organization
-    let mut games_map: HashMap<String, Vec<(String, String)>> = HashMap::new();
+    // Use BTreeMaps for automatic sorting by key, which is more efficient
+    // than manual sorting. Structure: game_name -> (hash -> rom_name)
+    let mut games_map: BTreeMap<String, BTreeMap<String, String>> = BTreeMap::new();
 
     for (hash, entries) in known_roms {
         for (game, rom) in entries {
-            games_map.entry(game.clone())
-                .or_insert_with(Vec::new)
-                .push((hash.clone(), rom.clone()));
+            games_map
+                .entry(game.clone())
+                .or_default()
+                .insert(hash.clone(), rom.clone());
         }
     }
 
-    // Sort games alphabetically
-    let mut sorted_games: Vec<_> = games_map.into_iter().collect();
-    sorted_games.sort_by(|a, b| a.0.cmp(&b.0));
-
-    // Create final structure
-    let mut result = serde_json::Map::new();
-    for (game, mut roms) in sorted_games {
-        // Sort ROMs within each game
-        roms.sort_by(|a, b| a.1.cmp(&b.1));
-
-        let rom_entries: serde_json::Map<String, serde_json::Value> = roms
-            .into_iter()
-            .map(|(hash, rom_name)| (hash, serde_json::Value::String(rom_name)))
-            .collect();
-
-        result.insert(game, serde_json::Value::Object(rom_entries));
-    }
+    // Convert the BTreeMap structure directly to a serde_json::Value
+    let result = serde_json::to_value(&games_map)?;
 
     // Write to temporary file first, then rename atomically
     let temp_file = format!("{}.tmp", db_file);

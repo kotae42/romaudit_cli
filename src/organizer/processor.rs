@@ -1,4 +1,4 @@
-// src/organizer/processor.rs - File processing
+// src/organizer/processor.rs - File processing (key sections fixed)
 
 use std::fs;
 use std::path::{Path, PathBuf};
@@ -33,9 +33,6 @@ pub fn process_file(
         .unwrap_or("unknown")
         .to_string();
     
-    // Note: file_hash.md5 and file_hash.crc are available here if needed
-    // Currently we use sha1 for the known_roms database
-    
     if !file_hash.matching_entries.is_empty() {
         // Filter to only process games that are present in our collection
         let mut entries_for_present_games = file_hash.matching_entries
@@ -53,16 +50,14 @@ pub fn process_file(
                     parent_clone_map,
                 );
             }
-            // For MAME DATs, use entries exactly as specified in XML
             
             // Process placements
-            let mut first_placement = true;
-            let mut source_path = file_hash.path.clone();
-            let mut placed_successfully = false;
+            let mut placements = 0;
             let mut organized_game = String::new();
             
             for rom_entry in &entries_for_present_games {
                 let game_name = &rom_entry.game;
+                
                 let needs_folder = games_needing_folders.contains(game_name) ||
                                    rom_entry.name.contains('\\') || 
                                    rom_entry.name.contains('/');
@@ -72,6 +67,7 @@ pub fn process_file(
                     game_name,
                     needs_folder,
                     &config.rom_dir,
+                    rom_entry.is_disk,
                 )?;
                 
                 if new_path.exists() {
@@ -79,32 +75,38 @@ pub fn process_file(
                     continue;
                 }
                 
-                // For MAME DATs, only place files once per game (no duplication)
-                if is_mame_dat && !first_placement {
-                    // For MAME, each game should have its own copy already specified
-                    // We don't duplicate files between games
-                    continue;
+                // For non-merged sets, we copy. For all others, we move.
+                let operation = if *dat_type == DatType::NonMerged {
+                    fs::copy(&file_hash.path, &new_path).map(|_| ())
+                } else {
+                    fs::rename(&file_hash.path, &new_path)
+                };
+
+                if operation.is_ok() {
+                    placements += 1;
+                    if organized_game.is_empty() {
+                        organized_game = game_name.clone();
+                    }
+
+                    // Add to known ROMs
+                    known_roms.entry(file_hash.sha1.clone())
+                        .or_insert_with(Vec::new)
+                        .push((game_name.clone(), rom_entry.name.clone()));
+                    
+                    // If we moved the file, we can't place it anywhere else
+                    if *dat_type != DatType::NonMerged {
+                        break;
+                    }
                 }
-                
-                if first_placement {
-                    // Move the file for the first placement
-                    fs::rename(&file_hash.path, &new_path)?;
-                    source_path = new_path.clone();
-                    first_placement = false;
-                    placed_successfully = true;
-                    organized_game = game_name.clone();
-                } else if !is_mame_dat {
-                    // Copy the file for subsequent placements (only for non-MAME)
-                    fs::copy(&source_path, &new_path)?;
-                }
-                
-                // Add to known ROMs
-                known_roms.entry(file_hash.sha1.clone())
-                    .or_insert_with(Vec::new)
-                    .push((game_name.clone(), rom_entry.name.clone()));
             }
-            
-            if placed_successfully {
+
+            // After all potential placements, handle the original file
+            if placements > 0 {
+                // If we copied the file, we can now remove the original.
+                // If we moved it, this is already done.
+                if *dat_type == DatType::NonMerged {
+                    let _ = fs::remove_file(&file_hash.path);
+                }
                 return Ok(ProcessResult::Organized(organized_game));
             } else {
                 // All destinations existed, treat as duplicate
@@ -179,8 +181,14 @@ fn calculate_rom_path(
     game_name: &str,
     needs_folder: bool,
     rom_dir: &str,
+    is_disk: bool,
 ) -> Result<PathBuf> {
-    let new_path = if needs_folder {
+    let new_path = if is_disk {
+        // CHDs go in a subdirectory named after the disk
+        let disk_dir = Path::new(rom_dir).join(game_name).join(rom_name);
+        fs::create_dir_all(&disk_dir)?;
+        disk_dir.join(format!("{}.chd", rom_name))
+    } else if needs_folder {
         if rom_name.contains('\\') || rom_name.contains('/') {
             // Preserve internal folder structure
             let mut path_parts = Path::new(rom_dir).join(game_name);

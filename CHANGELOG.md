@@ -5,6 +5,22 @@ All notable changes to romaudit_cli will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.1.0] - 2025-08-14
+
+### Added
+- **Performance**: File scanning and hashing is now multi-threaded to take advantage of modern multi-core processors. This significantly speeds up the most time-consuming part of the audit process, especially for large collections.
+- Added `rayon` dependency for parallel processing.
+
+### Fixed
+- **Critical Bug (MAME)**: Corrected the logic for handling MAME non-merged sets. The tool no longer assumes files are pre-sorted and will correctly copy files to create self-contained game directories from a flat structure.
+- **Critical Bug (MAME)**: Fixed incorrect placement of CHD (disk) files. CHDs are now correctly placed within a subdirectory named after the disk inside the game's main folder, as MAME expects.
+- **Major Bug**: Fixed an issue where the scanner could ignore the user's entire collection if it was located in a folder named `roms`. The directory skipping logic is now more precise.
+- **Logic Simplification**: Replaced the complex, heuristic-based logic for folder creation with a simpler, more predictable rule. A game gets a folder only if it contains multiple files or if its single file's name doesn't match the game's name.
+- **Efficiency**: Improved the database saving logic to be more efficient and performant by using sorted maps, avoiding unnecessary computation.
+
+### Changed
+- Updated `rayon` dependency to version `1.11.0`.
+
 ## [2.0.1] - 2025-01-11
 
 ### Changed

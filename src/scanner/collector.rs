@@ -37,10 +37,16 @@ fn should_process_file(path: &Path, config: &Config) -> Result<bool> {
         .ok_or_else(|| RomAuditError::InvalidPath(path.to_string_lossy().to_string()))?
         .to_string_lossy();
 
-    // Skip DAT/XML files
-    if let Some(ext) = path.extension().and_then(|e| e.to_str()) {
-        if ext.eq_ignore_ascii_case("dat") || ext.eq_ignore_ascii_case("xml") {
-            return Ok(false);
+    // Skip DAT/XML files ONLY in the root directory (not in ROM folders)
+    // Some MAME ROMs have .dat extension!
+    if let Some(parent) = path.parent() {
+        if parent == Path::new(".") {
+            // Only skip DAT/XML in root directory
+            if let Some(ext) = path.extension().and_then(|e| e.to_str()) {
+                if ext.eq_ignore_ascii_case("dat") || ext.eq_ignore_ascii_case("xml") {
+                    return Ok(false);
+                }
+            }
         }
     }
 
@@ -59,30 +65,21 @@ fn should_process_file(path: &Path, config: &Config) -> Result<bool> {
 
 /// Check if a path is within a generated directory
 pub fn is_generated_directory(path: &Path, config: &Config) -> bool {
-    if let Some(name) = path.file_name() {
-        let name_str = name.to_string_lossy();
+    let Ok(current_dir) = std::env::current_dir() else { return false };
+    
+    let generated_dirs = [
+        current_dir.join(&config.rom_dir),
+        current_dir.join(&config.logs_dir),
+        // Note: duplicate and unknown dirs are handled at a higher level now
+        // and created inside the execution path, so we don't need to check them here.
+    ];
 
-        // Check if this is one of our generated directories
-        if name_str == config.rom_dir ||
-           name_str == config.logs_dir ||
-           name_str.starts_with(&config.duplicate_prefix) ||
-           name_str.starts_with(&config.unknown_prefix) {
-            return true;
-        }
+    // Get the absolute path of the file/directory being checked
+    let Ok(abs_path) = path.canonicalize() else { return false };
 
-        // Also check ancestors
-        path.ancestors().any(|ancestor| {
-            if let Some(ancestor_name) = ancestor.file_name() {
-                let ancestor_str = ancestor_name.to_string_lossy();
-                ancestor_str == config.rom_dir ||
-                ancestor_str == config.logs_dir ||
-                ancestor_str.starts_with(&config.duplicate_prefix) ||
-                ancestor_str.starts_with(&config.unknown_prefix)
-            } else {
-                false
-            }
-        })
-    } else {
-        false
-    }
+    // Check if the path is inside any of the generated directories
+    generated_dirs.iter().any(|gen_dir| {
+        let Ok(abs_gen_dir) = gen_dir.canonicalize() else { return false };
+        abs_path.starts_with(abs_gen_dir)
+    })
 }
