@@ -32,7 +32,7 @@ pub enum DatType {
     Standard,   // Non-MAME DATs (No-Intro, etc.)
 }
 
-#[derive(Debug)]
+#[derive(Debug, Default)]
 pub struct ScanResult {
     pub have: HashSet<String>,
     pub missing: HashSet<String>,

@@ -1,57 +1,54 @@
-// src/organizer/rules.rs - Organization rules
+// src/organizer/rules.rs - Helper functions for organizers.
 
-use std::collections::HashSet;
-use std::path::Path;
+use std::fs;
+use std::path::{Path, PathBuf};
+use std::collections::{HashSet, HashMap};
+
+use crate::error::Result;
+use crate::types::{RomEntry, RomDb};
 use crate::config::Config;
-use crate::types::RomDb;
+use super::folders;
 
-/// Identify games that need folders based on various rules
-pub fn identify_games_needing_folders(
-    rom_db: &RomDb,
-    config: &Config,
-) -> HashSet<String> {
+pub fn identify_games_needing_folders(rom_db: &RomDb, _config: &Config) -> HashSet<String> {
     let mut games_needing_folders = HashSet::new();
-    
-    // Count ROMs per game
-    let mut game_rom_counts: std::collections::HashMap<String, HashSet<String>> = std::collections::HashMap::new();
-    
-    for rom_entries in rom_db.values() {
-        for rom_entry in rom_entries {
-            game_rom_counts
-                .entry(rom_entry.game.clone())
-                .or_insert_with(HashSet::new)
-                .insert(rom_entry.name.clone());
+    let mut game_rom_info: HashMap<String, Vec<RomEntry>> = HashMap::new();
+    for entries in rom_db.values() {
+        for entry in entries {
+            game_rom_info.entry(entry.game.clone()).or_default().push(entry.clone());
         }
     }
-    
-    // Check each game to determine if it needs a folder
-    for (game_name, rom_names) in game_rom_counts {
-        let rom_count = rom_names.len();
-        
-        // Two cases for needing folders:
-        // 1. Games with multiple ROMs always get folders
-        // 2. Single ROM games where ROM name doesn't match game name
-        if rom_count > 1 {
-            games_needing_folders.insert(game_name);
-        } else if rom_count == 1 {
-            // For single ROM games, check if the ROM name matches the game name
-            if let Some(rom_name) = rom_names.iter().next() {
-                if !is_rom_name_similar_to_game(&game_name, rom_name, config) {
-                    games_needing_folders.insert(game_name);
-                }
-            }
+    for (game_name, entries) in game_rom_info {
+        if entries.len() > 1 { games_needing_folders.insert(game_name); continue; }
+        if let Some(entry) = entries.first() {
+            if entry.is_disk { games_needing_folders.insert(game_name); continue; }
+            if entry.name.contains('/') || entry.name.contains('\\') { games_needing_folders.insert(game_name); continue; }
+            let rom_stem = Path::new(&entry.name).file_stem().and_then(|s| s.to_str()).unwrap_or(&entry.name);
+            if rom_stem != game_name { games_needing_folders.insert(game_name); }
         }
     }
-    
     games_needing_folders
 }
 
-/// Check if a ROM name is similar enough to the game name.
-/// The new logic is simple: if the ROM's stem (name without extension)
-/// exactly matches the game name, they are similar. Otherwise, they are not.
-pub fn is_rom_name_similar_to_game(game_name: &str, rom_name: &str, _config: &Config) -> bool {
-    Path::new(rom_name)
-        .file_stem()
-        .and_then(|s| s.to_str())
-        .map_or(false, |stem| stem == game_name)
+pub fn move_to_folder(source_path: &Path, dest_dir: &mut Option<PathBuf>, prefix: &str) -> Result<()> {
+    if dest_dir.is_none() { *dest_dir = Some(folders::create_next_folder(prefix)?); }
+    if let Some(dir) = dest_dir {
+        if let Some(filename) = source_path.file_name() {
+            let _ = fs::rename(source_path, dir.join(filename));
+        }
+    }
+    Ok(())
+}
+
+pub fn calculate_rom_path(entry: &RomEntry, games_needing_folders: &HashSet<String>, rom_dir: &str) -> Result<PathBuf> {
+    let needs_folder = games_needing_folders.contains(&entry.game);
+    let base_dir = Path::new(rom_dir);
+    let game_dir = base_dir.join(&entry.game);
+    let final_path = if entry.is_disk {
+        game_dir.join(&entry.name).join(format!("{}.chd", &entry.name))
+    } else if needs_folder {
+        game_dir.join(&entry.name)
+    } else {
+        base_dir.join(&entry.name)
+    };
+    Ok(final_path)
 }
