@@ -24,7 +24,7 @@ impl fmt::Display for RomAuditError {
             RomAuditError::Io(e) => write!(f, "IO error: {}", e),
             RomAuditError::Json(e) => write!(f, "JSON error: {}", e),
             RomAuditError::Xml(e) => write!(f, "XML error: {}", e),
-            RomAuditError::NoDatFile => write!(f, "No .dat or .xml file found in current directory"),
+            RomAuditError::NoDatFile => write!(f, "No .dat file found in current directory"),
             RomAuditError::InvalidPath(p) => write!(f, "Invalid path: {}", p),
             RomAuditError::ParseError(e) => write!(f, "Parse error: {}", e),
             RomAuditError::ConfigError(e) => write!(f, "Configuration error: {}", e),

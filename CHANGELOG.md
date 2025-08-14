@@ -5,6 +5,29 @@ All notable changes to romaudit_cli will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.2.0] - 2025-08-14
+
+### Changed
+- **BREAKING**: Removed all MAME-specific handling to focus on standard DAT files
+- **BREAKING**: Removed support for `.xml` files - now only supports `.dat` files
+- Simplified codebase by ~30% for better maintainability
+- All games now treated independently (no parent/clone relationships)
+- Shared ROMs always copied to each game needing them
+
+### Removed
+- MAME XML detection and special handling
+- Parent/clone relationship tracking
+- DAT type detection (merged/split/non-merged)
+- Support for `<machine>` tags
+- `cloneof` and `romof` attribute parsing
+- `src/parser/detector.rs` file (MAME detection only)
+
+### Improved
+- Cleaner, more focused codebase
+- Simpler organization logic
+- Better performance without MAME detection overhead
+- More predictable behavior for all DAT files
+
 ## [2.1.0] - 2025-08-14
 
 ### Added

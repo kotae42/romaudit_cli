@@ -61,7 +61,7 @@
 
 ## Need Commercial License?
 
-If you need to use romaudit_cli for any commercial or organizational purpose, please contact for licensing options: [kotae042@gmai.com]
+If you need to use romaudit_cli for any commercial or organizational purpose, please contact for licensing options: [your-email@example.com]
 
 ## Why This License?
 

@@ -1,14 +1,14 @@
 # romaudit_cli
 
-[![Version](https://img.shields.io/badge/version-2.1.0-blue.svg)](https://github.com/yourusername/romaudit_cli)
+[![Version](https://img.shields.io/badge/version-2.2.0-blue.svg)](https://github.com/yourusername/romaudit_cli)
 [![License](https://img.shields.io/badge/license-Personal%20Use%20Only-red.svg)](LICENSE)
 [![Rust](https://img.shields.io/badge/rust-2024%20edition-orange.svg)](https://www.rust-lang.org/)
 
-A powerful command-line ROM collection management tool written in Rust. romaudit_cli helps you organize, verify, and maintain your ROM collections using DAT/XML files, with intelligent folder organization and comprehensive tracking.
+A powerful command-line ROM collection management tool written in Rust. romaudit_cli helps you organize, verify, and maintain your ROM collections using DAT files, with intelligent folder organization and comprehensive tracking.
 
 **📋 License: Personal Use Only** - Free for personal use. Commercial use prohibited. See [LICENSE](LICENSE) for details.
 
-**🚀 New in 2.1.0**: Multi-threaded scanning for significantly faster performance!
+**🚀 New in 2.2.0**: Streamlined for standard DAT files - focused on No-Intro and similar formats!
 
 ## Quick Start
 
@@ -25,7 +25,7 @@ cargo build --release
 ./target/release/romaudit_cli
 
 # The tool will:
-# - Look for a .dat or .xml file in current directory
+# - Look for a .dat file in current directory
 # - Scan and organize ROMs
 # - Create roms/ and logs/ directories
 # - Save progress to rom_db.json
@@ -35,9 +35,9 @@ cargo build --release
 
 ## Features
 
-- **Multi-threaded Performance**: Utilizes multiple CPU cores for significantly faster file scanning and hashing.
+- **Standard DAT Support**: Optimized for No-Intro and similar DAT formats
+- **Multi-threaded Performance**: Utilizes multiple CPU cores for fast file scanning
 - **Automatic ROM Organization**: Intelligently organizes ROMs based on configurable rules
-- **Multi-format Support**: Works with both DAT and XML files (No-Intro and MAME formats)
 - **Smart Folder Management**: 
   - Multi-part games (disks, tracks) automatically placed in folders
   - Single ROMs with mismatched names get their own folders
@@ -47,7 +47,6 @@ cargo build --release
 - **Unknown ROM Handling**: Separates unrecognized files for easy review
 - **Shared ROM Tracking**: Identifies ROMs used by multiple games
 - **Progress Tracking**: Visual progress bar during scanning
-- **Large File Support**: Optimized for large MAME XML files (45MB+)
 - **Graceful Shutdown**: Clean interruption handling with Ctrl+C
 - **Detailed Logging**: Comprehensive logs for all operations
 - **Persistent Database**: Maintains ROM database across scans
@@ -55,31 +54,19 @@ cargo build --release
 - **Modern Rust**: Uses Rust edition 2024 for latest language features
 - **Optimized Performance**: Small binary size with aggressive optimizations
 
-## What's New in 2.0.0
+## What's New in 2.2.0
 
-**Major Architectural Refactoring**:
-- Complete rewrite from monolithic to modular architecture
-- Code organized into 14 specialized modules
-- **100% backward compatible** - no functional changes
-- Same configuration, same output, same database format
-- Easier to maintain, test, and extend
-
-**All v1.6.4 features preserved**:
-- MAME DAT type detection (merged/split/non-merged)
-- Smart organization rules
-- Single-pass scanning with cached hashes
-- Parent/clone relationship handling
-- Graceful shutdown (Ctrl+C)
+**Focused on Standard DAT Files**:
+- Removed MAME-specific handling for cleaner, more maintainable code
+- Optimized for No-Intro, Redump, and similar DAT formats
+- Simplified organization logic
+- Improved performance for standard collections
 
 ## Limitations
 
 - **No Compressed File Support**: romaudit_cli works only with uncompressed ROM files. ZIP, 7Z, RAR, and other compressed formats are not supported. Extract your ROMs before scanning.
 
 ## Installation
-
-### Download Pre-built Binary (Recommended)
-
-Download the latest release for your platform from the [Releases page](https://github.com/yourusername/romaudit_cli/releases).
 
 ### Prerequisites for Building
 
@@ -100,7 +87,7 @@ The compiled binary will be in `target/release/romaudit_cli` (or `romaudit_cli.e
 
 ### Requirements
 
-- A `.dat` or `.xml` file (ROM database) in the current directory
+- A `.dat` file (ROM database) in the current directory
 - ROM files to be organized (can be in subdirectories)
 - **Important**: ROM files must be uncompressed. The tool does not support ZIP, 7Z, RAR, or other compressed formats.
 
@@ -111,7 +98,7 @@ The compiled binary will be in `target/release/romaudit_cli` (or `romaudit_cli.e
    - romaudit_cli only processes uncompressed ROM files
 
 2. Place the romaudit_cli executable in a directory containing:
-   - A `.dat` or `.xml` file (ROM database)
+   - A `.dat` file (ROM database)
    - Uncompressed ROM files to be organized
 
 3. Run the program (no configuration needed):
@@ -120,9 +107,9 @@ The compiled binary will be in `target/release/romaudit_cli` (or `romaudit_cli.e
    ```
 
 4. The program will:
-   - Automatically detect and use the first `.dat` or `.xml` file found
+   - Automatically detect and use the first `.dat` file found
    - Scan all uncompressed files in the current directory and subdirectories
-   - Match them against the DAT/XML file
+   - Match them against the DAT file
    - Organize them according to the rules
    - Generate detailed logs
    - Handle interruptions gracefully (Ctrl+C saves progress)
@@ -140,8 +127,8 @@ After running, your directory will be organized as:
 │   │   ├── disk1.bin
 │   │   └── disk2.bin
 │   ├── Single Game.rom     # Single ROMs directly in roms/
-│   └── [BIOS] System/      # System files always in folders
-│       └── bios.bin
+│   └── Special Game/       # Games with mismatched names
+│       └── SPECIAL.BIN
 ├── logs/                   # Detailed audit logs
 │   ├── have.txt           # List of found ROMs
 │   ├── missing.txt        # List of missing ROMs
@@ -150,7 +137,7 @@ After running, your directory will be organized as:
 ├── duplicates1/           # Duplicate files (if any)
 ├── unknown1/              # Unrecognized files (if any)
 ├── rom_db.json           # Persistent ROM database
-└── your_file.dat/.xml    # Original DAT/XML file
+└── your_file.dat         # Original DAT file
 ```
 
 ## Organization Rules
@@ -164,7 +151,6 @@ romaudit_cli follows these intelligent organization rules:
 
 2. **Single ROM (matching name)** → Direct in roms/
    - Example: `roms/Sonic the Hedgehog.md`
-   - Example: `roms/[BIOS] Nintendo 64DD Drive Controller (Japan) (Development) (1998-06-16).bin`
 
 3. **Single ROM (different name)** → Use folder
    - Example: `roms/Memory (Japan)/MEMORY.ASF`
@@ -197,48 +183,18 @@ db_file = "my_database.json"
 
 **Note**: The config file is completely optional. The tool runs perfectly with default settings.
 
-## DAT/XML File Support
+## DAT File Support
 
-romaudit_cli automatically detects and supports various file formats:
+romaudit_cli supports standard DAT file format (XML-based):
 
-### No-Intro Style DAT
+### Standard DAT Format (No-Intro Style)
 ```xml
 <game name="Game Name">
     <rom name="game.rom" size="524288" crc="12345678" md5="..." sha1="..."/>
 </game>
 ```
 
-### MAME Style XML
-```xml
-<machine name="Game Name">
-    <rom name="game.rom" size="524288" crc="12345678" md5="..." sha1="...">
-    </rom>
-</machine>
-```
-
-### MAME DAT Types (Auto-detected)
-
-The tool automatically detects and handles three MAME DAT types:
-
-1. **Non-Merged Sets**:
-   - Each game is completely self-contained
-   - All ROMs (including shared ones) are duplicated for each game
-   - Ideal for: Individual game distribution, arcade cabinets
-   - Space usage: Highest (2-3x original size)
-
-2. **Split Sets**:
-   - Clone games only contain unique ROMs
-   - Clones depend on parent ROMs to function
-   - Ideal for: Complete collections with space constraints
-   - Space usage: Medium (more efficient than non-merged)
-
-3. **Merged Sets**:
-   - Clone ROMs are stored in parent game folders
-   - No separate clone folders created
-   - Ideal for: Maximum space efficiency
-   - Space usage: Lowest
-
-The tool automatically detects the DAT type from the header and organizes accordingly, preventing unnecessary duplication for split and merged sets.
+The tool automatically detects and parses DAT files with multiple hash types (CRC32, MD5, SHA1).
 
 ## Advanced Features
 
@@ -273,50 +229,15 @@ If you need to stop the tool:
 - Progress is automatically saved to `rom_db.json`
 - Run the tool again to continue from where you left off
 
-## Example Scenarios
-
-### Scenario 1: Multi-disk Game
-```
-Input: diskA.bin, diskB.bin (for "Final Fantasy VII")
-Output: roms/Final Fantasy VII/diskA.bin
-         roms/Final Fantasy VII/diskB.bin
-```
-
-### Scenario 2: Single BIOS File
-```
-Input: [BIOS] Nintendo 64DD Drive Controller.bin
-Output: roms/[BIOS] Nintendo 64DD Drive Controller.bin
-```
-
-### Scenario 3: Multi-file BIOS
-```
-Input: bios7i.bin, firmware.bin (for "[BIOS] Nintendo DSi")
-Output: roms/[BIOS] Nintendo DSi/bios7i.bin
-         roms/[BIOS] Nintendo DSi/firmware.bin
-```
-
-### Scenario 4: Mismatched Names
-```
-Input: MEMORY.ASF (for game "Memory (Japan)")
-Output: roms/Memory (Japan)/MEMORY.ASF
-```
-
 ## Performance
 
-- **Multi-threaded Scanning**: Leverages multiple CPU cores for faster hashing on modern processors.
+- **Multi-threaded Scanning**: Leverages multiple CPU cores for faster hashing
 - **Efficient Hashing**: Uses 1MB buffer for optimal performance  
-- **Single-pass scanning**: Calculates hashes only once per file (v1.6.3+)
+- **Single-pass scanning**: Calculates hashes only once per file
 - **Progress Tracking**: Visual feedback with ETA for long operations
-- **Large File Support**: Adaptive buffering for large XML files (8MB buffer for files >10MB)
 - **Direct File Access**: Working with uncompressed files provides faster processing
 - **Persistent Database**: Speeds up subsequent scans
 - **Graceful Interruption**: Clean shutdown preserves progress
-
-**Note**: For large MAME collections:
-- **Non-merged sets**: Ensure you have 2-3x the ROM size in free space
-- **Split sets**: More space-efficient, clones depend on parents
-- **Merged sets**: Most space-efficient, all variants in parent folder
-- The tool automatically detects your DAT type and organizes accordingly
 
 ## Contributing
 
@@ -336,19 +257,13 @@ See the [LICENSE](LICENSE) file for full details and [LICENSE-FAQ.md](LICENSE-FA
 
 For commercial licensing, please contact: [your-email@example.com]
 
-## Acknowledgments
-
-- Inspired by ROM management needs in the retro gaming community
-- Built with Rust for performance and reliability
-- Thanks to all contributors and testers
-
 ## Troubleshooting
 
-### No DAT/XML file found
-Ensure you have a `.dat` or `.xml` file in the current directory. The tool automatically detects and uses the first one it finds.
+### No DAT file found
+Ensure you have a `.dat` file in the current directory. The tool automatically detects and uses the first one it finds.
 
 ### Files not being matched
-- Check that your DAT/XML file uses supported hash types (CRC32, MD5, SHA1)
+- Check that your DAT file uses supported hash types (CRC32, MD5, SHA1)
 - **Ensure ROM files are uncompressed** - ZIP, 7Z, RAR files are not supported
 - Verify file integrity if ROMs are not being recognized
 
@@ -364,18 +279,7 @@ romaudit_cli does not support compressed files. Extract all ROMs from their arch
 Ensure you have write permissions in the directory where romaudit_cli is running.
 
 ### Large collections
-For very large collections, the initial scan may take time. The tool shows progress with ETA (v1.6.3+). Subsequent scans will be faster due to the persistent database.
-
-### Disk space issues
-MAME collections space requirements depend on DAT type:
-- **Non-merged sets**: Require 2-3x original size (all ROMs duplicated)
-- **Split sets**: More efficient (clones don't duplicate parent ROMs)
-- **Merged sets**: Most efficient (clones stored with parents)
-
-If you're running out of space:
-1. Use split or merged DATs instead of non-merged
-2. Organize in smaller batches
-3. Check available disk space before organizing large collections
+For very large collections, the initial scan may take time. The tool shows progress with ETA. Subsequent scans will be faster due to the persistent database.
 
 ### Process interruption
 If you need to stop the tool, press Ctrl+C. The tool will save its progress and you can continue later by running it again.
@@ -388,11 +292,8 @@ If you need to stop the tool, press Ctrl+C. The tool will save its progress and 
 ### Does romaudit_cli support compressed ROM files?
 **No.** romaudit_cli only works with uncompressed ROM files. You must extract all ROMs from ZIP, 7Z, RAR, or other archive formats before scanning. This is by design to ensure accurate hash verification and file organization.
 
-### What's the difference between DAT and XML files?
-Both contain ROM databases. DAT files are typically used by No-Intro, while XML files are commonly used by MAME. romaudit_cli automatically detects and handles both formats.
-
-### Can it handle large MAME XML files?
-**Yes.** Version 1.6.2 includes optimizations for large XML files, including adaptive buffering and progress indicators for files over 10MB.
+### What DAT formats are supported?
+Standard XML-based DAT files, commonly used by No-Intro, Redump, and similar preservation projects.
 
 ### Why doesn't it support compressed files?
 Working with uncompressed files ensures:
@@ -402,4 +303,4 @@ Working with uncompressed files ensures:
 - Simpler codebase
 
 ### What file formats are supported?
-Any uncompressed ROM file format (.nes, .snes, .md, .gb, .gba, .n64, .iso, .bin, etc.) that matches entries in your DAT/XML file.
+Any uncompressed ROM file format (.nes, .snes, .md, .gb, .gba, .n64, .iso, .bin, etc.) that matches entries in your DAT file.

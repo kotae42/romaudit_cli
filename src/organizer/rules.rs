@@ -1,54 +1,183 @@
-// src/organizer/rules.rs - Helper functions for organizers.
+// src/organizer/rules.rs - Organization rules
 
-use std::fs;
-use std::path::{Path, PathBuf};
-use std::collections::{HashSet, HashMap};
-
-use crate::error::Result;
-use crate::types::{RomEntry, RomDb};
+use std::collections::HashSet;
+use std::path::Path;
 use crate::config::Config;
-use super::folders;
+use crate::types::RomDb;
 
-pub fn identify_games_needing_folders(rom_db: &RomDb, _config: &Config) -> HashSet<String> {
+/// Identify games that need folders based on various rules
+pub fn identify_games_needing_folders(
+    rom_db: &RomDb,
+    config: &Config,
+) -> HashSet<String> {
     let mut games_needing_folders = HashSet::new();
-    let mut game_rom_info: HashMap<String, Vec<RomEntry>> = HashMap::new();
-    for entries in rom_db.values() {
-        for entry in entries {
-            game_rom_info.entry(entry.game.clone()).or_default().push(entry.clone());
+    
+    // Count ROMs per game
+    let mut game_rom_counts: std::collections::HashMap<String, HashSet<String>> = std::collections::HashMap::new();
+    
+    for rom_entries in rom_db.values() {
+        for rom_entry in rom_entries {
+            game_rom_counts
+                .entry(rom_entry.game.clone())
+                .or_insert_with(HashSet::new)
+                .insert(rom_entry.name.clone());
         }
     }
-    for (game_name, entries) in game_rom_info {
-        if entries.len() > 1 { games_needing_folders.insert(game_name); continue; }
-        if let Some(entry) = entries.first() {
-            if entry.is_disk { games_needing_folders.insert(game_name); continue; }
-            if entry.name.contains('/') || entry.name.contains('\\') { games_needing_folders.insert(game_name); continue; }
-            let rom_stem = Path::new(&entry.name).file_stem().and_then(|s| s.to_str()).unwrap_or(&entry.name);
-            if rom_stem != game_name { games_needing_folders.insert(game_name); }
+    
+    // Check each game to determine if it needs a folder
+    for (game_name, rom_names) in game_rom_counts {
+        let rom_count = rom_names.len();
+        
+        // Two cases for needing folders:
+        // 1. Games with multiple ROMs always get folders
+        // 2. Single ROM games where ROM name doesn't match game name
+        if rom_count > 1 {
+            games_needing_folders.insert(game_name);
+        } else if rom_count == 1 {
+            // For single ROM games, check if the ROM name matches the game name
+            if let Some(rom_name) = rom_names.iter().next() {
+                if !is_rom_name_similar_to_game(&game_name, rom_name, config) {
+                    games_needing_folders.insert(game_name);
+                }
+            }
         }
     }
+    
     games_needing_folders
 }
 
-pub fn move_to_folder(source_path: &Path, dest_dir: &mut Option<PathBuf>, prefix: &str) -> Result<()> {
-    if dest_dir.is_none() { *dest_dir = Some(folders::create_next_folder(prefix)?); }
-    if let Some(dir) = dest_dir {
-        if let Some(filename) = source_path.file_name() {
-            let _ = fs::rename(source_path, dir.join(filename));
+/// Check if a ROM name is similar enough to the game name
+pub fn is_rom_name_similar_to_game(game_name: &str, rom_name: &str, config: &Config) -> bool {
+    // First, get the ROM name without extension
+    let rom_without_ext = Path::new(rom_name)
+        .file_stem()
+        .and_then(|s| s.to_str())
+        .unwrap_or(rom_name);
+
+    // If the ROM name without extension exactly matches the game name, they're definitely similar!
+    if rom_without_ext == game_name {
+        return true;
+    }
+
+    // Special handling for very different names
+    let game_has_spaces = game_name.contains(' ');
+    let rom_has_spaces = rom_without_ext.contains(' ');
+    let rom_has_separators = rom_without_ext.contains('_') || rom_without_ext.contains('.');
+
+    if game_has_spaces && !rom_has_spaces && rom_has_separators {
+        // Cases like "[BIOS] Play-Yan Micro Key File (Japan)" vs "play_yanmicro.ini"
+        return false;
+    }
+
+    // If the ROM name is all uppercase and the game name isn't, they're different
+    if rom_without_ext.chars().any(|c| c.is_alphabetic() && c.is_uppercase()) &&
+       rom_without_ext == rom_without_ext.to_uppercase() &&
+       game_name != game_name.to_uppercase() {
+        // Cases like "MEMORY.ASF" vs "Memory (Japan)"
+        return false;
+    }
+
+    // If the game name has additional context (parentheses/brackets) that the ROM lacks
+    let game_has_context = game_name.contains('(') || game_name.contains('[');
+    let rom_has_context = rom_without_ext.contains('(') || rom_without_ext.contains('[');
+
+    if game_has_context && !rom_has_context {
+        // Extract base names for comparison
+        let game_base = extract_base_name(game_name);
+        let rom_base = extract_base_name(rom_name);
+
+        // For short names or names with very different formatting, be strict
+        if game_base.len() <= 10 || rom_base.len() <= 10 {
+            // Require exact match for short names
+            return game_base == rom_base;
+        }
+
+        // For longer names, check if they're meaningfully similar
+        let game_lower = game_base.to_lowercase();
+        let rom_lower = rom_base.to_lowercase();
+
+        // If bases are completely different, not similar
+        if !game_lower.contains(&rom_lower) && !rom_lower.contains(&game_lower) {
+            return false;
         }
     }
-    Ok(())
+
+    // Standard similarity checks for other cases
+    let game_base = extract_base_name(game_name);
+    let rom_base = extract_base_name(rom_name);
+
+    // 1. Exact match
+    if game_base == rom_base {
+        return true;
+    }
+
+    // 2. Case-insensitive match for longer names only
+    if game_base.len() > 8 && game_base.eq_ignore_ascii_case(&rom_base) {
+        return true;
+    }
+
+    // 3. One contains the other (for longer names)
+    if game_base.len() > 5 && rom_base.len() > 5 {
+        let game_lower = game_base.to_lowercase();
+        let rom_lower = rom_base.to_lowercase();
+
+        if game_lower.contains(&rom_lower) || rom_lower.contains(&game_lower) {
+            return true;
+        }
+    }
+
+    // 4. Check word similarity for multi-word names
+    let game_words = extract_significant_words(&game_base.to_lowercase(), &config.stop_words);
+    let rom_words = extract_significant_words(&rom_base.to_lowercase(), &config.stop_words);
+
+    if game_words.len() >= 2 && rom_words.len() >= 2 {
+        let common_words: HashSet<_> = game_words.intersection(&rom_words).collect();
+        let similarity_ratio = common_words.len() as f32 / game_words.len().min(rom_words.len()) as f32;
+
+        return similarity_ratio >= 0.7; // Higher threshold for multi-word names
+    }
+
+    false
 }
 
-pub fn calculate_rom_path(entry: &RomEntry, games_needing_folders: &HashSet<String>, rom_dir: &str) -> Result<PathBuf> {
-    let needs_folder = games_needing_folders.contains(&entry.game);
-    let base_dir = Path::new(rom_dir);
-    let game_dir = base_dir.join(&entry.game);
-    let final_path = if entry.is_disk {
-        game_dir.join(&entry.name).join(format!("{}.chd", &entry.name))
-    } else if needs_folder {
-        game_dir.join(&entry.name)
-    } else {
-        base_dir.join(&entry.name)
-    };
-    Ok(final_path)
+fn extract_base_name(name: &str) -> String {
+    // Remove file extension
+    let without_ext = Path::new(name)
+        .file_stem()
+        .and_then(|s| s.to_str())
+        .unwrap_or(name);
+
+    // Remove common suffixes in parentheses or brackets
+    let mut base = without_ext.to_string();
+
+    // Remove brackets and their contents first (like [BIOS])
+    while let Some(start) = base.find('[') {
+        if let Some(end) = base[start..].find(']') {
+            let end_pos = start + end + 1;
+            // Remove the bracket and any trailing space
+            if end_pos < base.len() && base.chars().nth(end_pos) == Some(' ') {
+                base.replace_range(start..end_pos + 1, "");
+            } else {
+                base.replace_range(start..end_pos, "");
+            }
+        } else {
+            break;
+        }
+    }
+
+    // Remove parentheses and their contents (like regions)
+    if let Some(pos) = base.find('(') {
+        base.truncate(pos);
+    }
+
+    base.trim().to_string()
+}
+
+fn extract_significant_words(text: &str, stop_words: &[String]) -> HashSet<String> {
+    // Split on non-alphanumeric characters and filter out configured stop words
+    text.split(|c: char| !c.is_alphanumeric())
+        .map(|s| s.trim())
+        .filter(|s| s.len() > 2 && !stop_words.contains(&s.to_string()))
+        .map(|s| s.to_string())
+        .collect()
 }

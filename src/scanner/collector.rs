@@ -37,13 +37,13 @@ fn should_process_file(path: &Path, config: &Config) -> Result<bool> {
         .ok_or_else(|| RomAuditError::InvalidPath(path.to_string_lossy().to_string()))?
         .to_string_lossy();
 
-    // Skip DAT/XML files ONLY in the root directory (not in ROM folders)
-    // Some MAME ROMs have .dat extension!
+    // Skip DAT files ONLY in the root directory (not in ROM folders)
+    // Some ROMs have .dat extension!
     if let Some(parent) = path.parent() {
         if parent == Path::new(".") {
-            // Only skip DAT/XML in root directory
+            // Only skip DAT files in root directory
             if let Some(ext) = path.extension().and_then(|e| e.to_str()) {
-                if ext.eq_ignore_ascii_case("dat") || ext.eq_ignore_ascii_case("xml") {
+                if ext.eq_ignore_ascii_case("dat") {
                     return Ok(false);
                 }
             }

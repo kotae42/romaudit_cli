@@ -6,17 +6,16 @@ use std::path::Path;
 use std::collections::HashSet;
 
 use crate::error::Result;
-use crate::types::{ScanResult, DatType, KnownRoms};
+use crate::types::{ScanResult, KnownRoms};
 use crate::config::Config;
 
 pub struct Logger {
     config: Config,
-    dat_type: DatType,
 }
 
 impl Logger {
-    pub fn new(config: Config, dat_type: DatType) -> Self {
-        Logger { config, dat_type }
+    pub fn new(config: Config) -> Self {
+        Logger { config }
     }
     
     pub fn write_logs(
@@ -47,9 +46,6 @@ impl Logger {
         let mut have_file = File::create(&have_log)?;
         
         writeln!(have_file, "ROMs Found: {} / {}", have.len(), all_games.len())?;
-        if self.dat_type != DatType::Standard {
-            writeln!(have_file, "DAT Type: {:?}", self.dat_type)?;
-        }
         writeln!(have_file)?;
         
         let mut have_list: Vec<_> = have.iter().collect();
@@ -85,20 +81,7 @@ impl Logger {
         let shared_log = Path::new(&self.config.logs_dir).join("shared.txt");
         let mut shared_file = File::create(&shared_log)?;
         
-        match self.dat_type {
-            DatType::NonMerged => {
-                writeln!(shared_file, "Shared ROMs (Non-merged mode: each game has its own complete copy):")?;
-            }
-            DatType::Split => {
-                writeln!(shared_file, "Shared ROMs (Split mode: clones depend on parent ROMs):")?;
-            }
-            DatType::Merged => {
-                writeln!(shared_file, "Shared ROMs (Merged mode: clone ROMs stay with parent):")?;
-            }
-            DatType::Standard => {
-                writeln!(shared_file, "Shared ROMs (same file content used by multiple games - each has its own copy):")?;
-            }
-        }
+        writeln!(shared_file, "Shared ROMs (same file content used by multiple games - each has its own copy):")?;
         writeln!(shared_file, "===============================================================================")?;
         writeln!(shared_file)?;
         

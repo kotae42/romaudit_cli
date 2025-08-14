@@ -24,15 +24,7 @@ pub type RomDb = HashMap<String, Vec<RomEntry>>;
 // Maps sha1 -> list of (game name, rom name) tuples for all satisfied ROMs
 pub type KnownRoms = HashMap<String, Vec<(String, String)>>;
 
-#[derive(Debug, Clone, PartialEq)]
-pub enum DatType {
-    NonMerged,  // Each game completely self-contained
-    Split,      // Clones depend on parents
-    Merged,     // Clones inside parent folders
-    Standard,   // Non-MAME DATs (No-Intro, etc.)
-}
-
-#[derive(Debug, Default)]
+#[derive(Debug)]
 pub struct ScanResult {
     pub have: HashSet<String>,
     pub missing: HashSet<String>,
@@ -45,9 +37,6 @@ pub struct ScanResult {
 pub struct ParsedDat {
     pub rom_db: RomDb,
     pub all_games: HashSet<String>,
-    pub dat_type: DatType,
-    pub parent_clone_map: HashMap<String, String>, // clone -> parent mapping
-    pub is_mame_dat: bool,  // NEW: Distinguish MAME XMLs for literal parsing
 }
 
 #[derive(Debug)]
