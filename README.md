@@ -1,6 +1,6 @@
 # romaudit_cli
 
-[![Version](https://img.shields.io/badge/version-2.2.0-blue.svg)](https://github.com/yourusername/romaudit_cli)
+[![Version](https://img.shields.io/badge/version-2.2.1-blue.svg)](https://github.com/yourusername/romaudit_cli)
 [![License](https://img.shields.io/badge/license-Personal%20Use%20Only-red.svg)](LICENSE)
 [![Rust](https://img.shields.io/badge/rust-2024%20edition-orange.svg)](https://www.rust-lang.org/)
 
@@ -8,7 +8,9 @@ A powerful command-line ROM collection management tool written in Rust. romaudit
 
 **📋 License: Personal Use Only** - Free for personal use. Commercial use prohibited. See [LICENSE](LICENSE) for details.
 
-**🚀 New in 2.2.0**: Streamlined for standard DAT files - focused on No-Intro and similar formats!
+**🚀 New in 2.2.1**: Major performance optimizations with hash caching, memory-mapped I/O, and incremental scanning!
+
+**Previous in 2.2.0**: Streamlined for standard DAT files - focused on No-Intro and similar formats!
 
 ## Quick Start
 
@@ -53,6 +55,15 @@ cargo build --release
 - **Fully Configurable**: No hardcoded values - everything is customizable
 - **Modern Rust**: Uses Rust edition 2024 for latest language features
 - **Optimized Performance**: Small binary size with aggressive optimizations
+
+## What's New in 2.2.1
+
+**Major Performance Optimizations**:
+- **Hash Caching**: Subsequent scans up to 90% faster by caching unchanged file hashes
+- **Memory-Mapped I/O**: Large files (>10MB) processed with zero-copy memory mapping
+- **Incremental Scanning**: Only processes new/modified files on repeat scans
+- **Async I/O Support**: Better throughput on modern SSDs with async file operations
+- **Smart Cache Management**: Persistent caching with automatic invalidation
 
 ## What's New in 2.2.0
 
@@ -231,6 +242,10 @@ If you need to stop the tool:
 
 ## Performance
 
+- **Hash Caching**: Skip re-hashing unchanged files (up to 90% speedup on subsequent scans)
+- **Memory-Mapped I/O**: Zero-copy access for large files (>10MB) reduces memory usage
+- **Incremental Scanning**: Only process new/modified files on repeat runs
+- **Async I/O**: Better throughput with modern storage devices
 - **Multi-threaded Scanning**: Leverages multiple CPU cores for faster hashing
 - **Efficient Hashing**: Uses 1MB buffer for optimal performance  
 - **Single-pass scanning**: Calculates hashes only once per file

@@ -16,6 +16,9 @@ pub enum RomAuditError {
     InvalidPath(String),
     ParseError(String),
     ConfigError(String),
+    Custom(String),
+    Bincode(bincode::Error),
+    Join(tokio::task::JoinError),
 }
 
 impl fmt::Display for RomAuditError {
@@ -28,6 +31,9 @@ impl fmt::Display for RomAuditError {
             RomAuditError::InvalidPath(p) => write!(f, "Invalid path: {}", p),
             RomAuditError::ParseError(e) => write!(f, "Parse error: {}", e),
             RomAuditError::ConfigError(e) => write!(f, "Configuration error: {}", e),
+            RomAuditError::Custom(e) => write!(f, "Error: {}", e),
+            RomAuditError::Bincode(e) => write!(f, "Serialization error: {}", e),
+            RomAuditError::Join(e) => write!(f, "Task join error: {}", e),
         }
     }
 }
@@ -49,6 +55,18 @@ impl From<serde_json::Error> for RomAuditError {
 impl From<quick_xml::Error> for RomAuditError {
     fn from(error: quick_xml::Error) -> Self {
         RomAuditError::Xml(error)
+    }
+}
+
+impl From<bincode::Error> for RomAuditError {
+    fn from(error: bincode::Error) -> Self {
+        RomAuditError::Bincode(error)
+    }
+}
+
+impl From<tokio::task::JoinError> for RomAuditError {
+    fn from(error: tokio::task::JoinError) -> Self {
+        RomAuditError::Join(error)
     }
 }
 

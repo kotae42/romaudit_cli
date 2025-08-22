@@ -13,6 +13,7 @@ use hex;
 use crate::error::Result;
 
 /// Calculate SHA1, MD5, and CRC32 hashes for a file
+#[allow(dead_code)]
 pub fn calculate_hashes(path: &Path, buffer_size: usize) -> Result<(String, String, String)> {
     let file = File::open(path)?;
     let mut reader = BufReader::new(file);

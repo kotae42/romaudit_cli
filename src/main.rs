@@ -1,5 +1,5 @@
 // romaudit_cli - ROM Collection Management Tool
-// Version 2.2.0
+// Version 2.2.1
 // Copyright (c) 2024 [Kotae42]
 //
 // This software is licensed for PERSONAL USE ONLY.
@@ -14,6 +14,7 @@ mod scanner;
 mod organizer;
 mod database;
 mod logger;
+mod cache;
 
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
@@ -51,7 +52,7 @@ impl RomAuditor {
     
     fn run(&mut self) -> Result<()> {
         // Scan files and calculate hashes
-        let scanner = scanner::Scanner::new(self.config.clone(), self.interrupted.clone());
+        let mut scanner = scanner::Scanner::new(self.config.clone(), self.interrupted.clone());
         let (file_hashes, games_with_files) = scanner.scan_files(
             Path::new("."),
             &self.parsed_dat.rom_db,
